@@ -95,7 +95,7 @@ export class BalloonBoard extends Board {
     const balloon: Balloon = {
       color,
       gfx,
-      buoy: randRange(this.rng, 13.5, 15.0),
+      buoy: randRange(this.rng, 10.6, 11.6), // one balloon ≈ gentle rise with a goat attached
       phase: randRange(this.rng, 0, 6.28),
       prop: {
         body,

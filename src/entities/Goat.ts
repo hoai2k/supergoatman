@@ -166,6 +166,16 @@ export class Goat {
       if (this.kicking <= 0) this.kickHits.clear();
     }
 
+    // hard caps keep the brawl readable — nobody pinballs across the arena
+    const lv = this.body.linvel();
+    const sp = Math.hypot(lv.x, lv.y);
+    if (sp > GOAT.maxSpeed) {
+      const k = GOAT.maxSpeed / sp;
+      this.body.setLinvel({ x: lv.x * k, y: lv.y * k }, false);
+    }
+    const av = this.body.angvel();
+    if (Math.abs(av) > GOAT.maxSpin) this.body.setAngvel(Math.sign(av) * GOAT.maxSpin, false);
+
     const kTarget = this.kicking > 0 ? kickCurve(1 - this.kicking / GOAT.kickActiveTime) : 0;
     this.kickAmt += (kTarget - this.kickAmt) * clamp(dt * 22, 0, 1);
   }

@@ -7,32 +7,39 @@
 export const PPU = 100; // pixels per world unit at camera zoom 1
 
 // ---- Goat body ---------------------------------------------------------
+// Tuned for a Super-Bunny-Man-ish HEAVY, deliberate feel: slow waddle,
+// short solid kick hops, knockback that tumbles rather than launches.
+// The sprite hull's mass is ~0.42, so impulses here are small numbers.
 export const GOAT = {
-  // Capsule collider (tight to the drawn body). Long axis = local X.
+  // Fallback capsule (used only if the sprite hull fails to build).
   halfLen: 0.30,
   radius: 0.27,
   density: 1.0,
   friction: 0.9, // grippy so it tumbles/rolls instead of sliding
   restitution: 0.02,
-  linearDamping: 0.25,
-  angularDamping: 0.55,
+  linearDamping: 0.4,
+  angularDamping: 1.1,
 
   // Rolling: left/right applies angular impulse to tumble the body.
-  rollTorque: 0.55,
-  maxRollSpeed: 11.0, // rad/s cap
-  groundRollAssist: 2.4, // extra linear nudge along ground when rolling & grounded
+  rollTorque: 0.13,
+  maxRollSpeed: 6.5, // rad/s cap — a waddle, not a blender
+  groundRollAssist: 2.0, // extra linear nudge along ground when rolling & grounded
 
   // Kick: launches head-first (feet push off). Aimed by body orientation.
-  kickImpulse: 5.6, // self launch impulse (grounded)
-  kickAirScale: 0.5, // fraction of launch impulse when feet aren't near a surface
-  kickSpin: 0.03, // small angular kick for style
+  kickImpulse: 2.9, // self launch impulse (grounded) — a hop, not a rocket
+  kickAirScale: 0.45, // fraction of launch impulse when feet aren't near a surface
+  kickSpin: 0.02, // small angular kick for style
   kickReach: 0.72, // how far the legs sweep from the feet end
   kickWidth: 0.34,
-  kickKnockback: 6.2, // impulse imparted to victims
-  kickUpBias: 0.35, // victims get lofted a bit (juicier)
+  kickKnockback: 2.5, // impulse imparted to victims
+  kickUpBias: 0.3, // victims get lofted a bit (juicier)
   kickActiveTime: 0.16, // seconds the leg is "out" and can hit
-  kickCooldown: 0.22, // seconds between kicks
+  kickCooldown: 0.3, // seconds between kicks
   kickPopPower: 1.0,
+
+  // Hard caps: nobody exceeds these no matter how many kicks stack up.
+  maxSpeed: 8.0, // u/s
+  maxSpin: 12.0, // rad/s
 
   // Grab: hands at the head end attach to whatever they touch.
   grabReach: 0.5,
