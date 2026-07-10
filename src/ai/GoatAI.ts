@@ -60,6 +60,19 @@ export class GoatAI {
       return intent;
     }
 
+    // stay away from the deadly arena edges
+    const b = arena.bounds;
+    if (me.x < b.minX + 2.6) {
+      intent.roll = 1;
+      if (me.x < b.minX + 1.9 && vel.x < 0.4) intent.kick = this.kickHold > 0;
+      return intent;
+    }
+    if (me.x > b.maxX - 2.6) {
+      intent.roll = -1;
+      if (me.x > b.maxX - 1.9 && vel.x > -0.4) intent.kick = this.kickHold > 0;
+      return intent;
+    }
+
     if (!safeTarget) {
       // wander
       this.wander += dt;
@@ -99,7 +112,7 @@ export class GoatAI {
     let best: Goat | undefined;
     let bd = Infinity;
     for (const g of arena.goats) {
-      if (g === goat || g.dead) continue;
+      if (g === goat || g.dead || g.eliminated) continue;
       const d = dist(goat.pos, g.pos);
       if (d < bd) {
         bd = d;

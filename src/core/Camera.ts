@@ -18,6 +18,8 @@ export class Camera {
   minZoom = 0.42;
   maxZoom = 1.5;
   bounds: CamBounds | null = null;
+  /** If set, zoom never goes low enough to show outside this rect. */
+  viewRect: CamBounds | null = null;
   private trauma = 0;
   private shakeT = 0;
 
@@ -53,7 +55,16 @@ export class Camera {
     const spanY = Math.max(0.1, maxY - minY);
     const zx = this.vw / (spanX * PPU);
     const zy = this.vh / (spanY * PPU);
-    this.targetZoom = clamp(Math.min(zx, zy), this.minZoom, this.maxZoom);
+    let lo = this.minZoom;
+    if (this.viewRect) {
+      const vr = this.viewRect;
+      lo = Math.max(
+        lo,
+        this.vw / ((vr.maxX - vr.minX) * PPU),
+        this.vh / ((vr.maxY - vr.minY) * PPU),
+      );
+    }
+    this.targetZoom = clamp(Math.min(zx, zy), lo, this.maxZoom);
     this.targetCenter = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
 
     if (this.bounds) this.clampToBounds();

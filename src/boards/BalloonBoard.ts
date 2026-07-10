@@ -5,7 +5,7 @@ import { CG, groups } from "../config";
 import type { Arena, Prop } from "../core/types";
 import { makeRng, randRange, type Vec2 } from "../core/math";
 
-const THEME: TerrainTheme = { top: 0xf4e2b8, topLight: 0xfff6dd, face: 0xcaa96f, faceDark: 0x9c7c48, grass: false };
+const THEME: TerrainTheme = { top: 0xf4f0ff, topLight: 0xffffff, face: 0xd8d4ea, faceDark: 0xb0aacb };
 
 interface Balloon {
   prop: Prop;
@@ -19,62 +19,63 @@ const COLORS = [0xff5d5d, 0xffd23f, 0x4fc3ff, 0x8fd94b, 0xb07bff, 0xff8fc7, 0xff
 
 export class BalloonBoard extends Board {
   readonly name = "Cloud Nine";
-  readonly blurb = "Stay airborne, pop your friends, and let gravity sort out the rest.";
-  readonly tip = "GRAB a balloon to ride it up. KICK a balloon (yours or theirs) to pop it. Nobody floats forever.";
+  readonly blurb = "A birthday party at 30,000 hooves. The floor is a rumour.";
+  readonly tip = "GRAB a balloon to ride it up, KICK balloons to pop them. Mind the ceremonial skewers on the sides — they are not decorative. OK, they are, but they also skewer.";
   theme = THEME;
   gravityScale = 1;
-  bounds = { minX: -14, maxX: 14, minY: -14, maxY: 10 };
 
   private balloons: Balloon[] = [];
   private layer = new Container();
-  private killY = 8.5;
-  private baseKillY = 8.5;
+  private baseKillY = 7.6;
+  private killY = this.baseKillY;
   private rng = makeRng(99);
-  private clouds: Graphics[] = [];
 
   build(arena: Arena) {
     this.bg.setGradient([
-      [0, "#5fb7ef"],
-      [0.55, "#9fd8f5"],
-      [1, "#e7f7ff"],
+      [0, "#3f55d6"],
+      [1, "#8fb8f2"],
     ]);
-    const far = this.bg.addLayer(0.2);
-    for (let i = 0; i < 6; i++) {
-      const c = new Graphics();
-      cloud(c, randRange(this.rng, 40, 70) / 60);
-      c.position.set(randRange(this.rng, -16, 16), randRange(this.rng, -9, 4));
-      far.addChild(c);
-      this.clouds.push(c);
-    }
-    const mid = this.bg.addLayer(0.5);
-    for (let i = 0; i < 5; i++) {
-      const c = new Graphics();
-      cloud(c, randRange(this.rng, 30, 50) / 60);
-      c.position.set(randRange(this.rng, -14, 14), randRange(this.rng, -6, 6));
-      mid.addChild(c);
-    }
-
+    this.addBackdrop("balloon");
     this.root.addChild(this.layer);
 
-    // sparse starting ledges — no camping, the void is always hungry
-    this.solidBox(arena, -8.5, 2.2, 3.0, 0.7);
-    this.solidBox(arena, 8.5, 2.2, 3.0, 0.7);
-    this.solidBox(arena, -2.8, -0.5, 2.2, 0.6);
-    this.solidBox(arena, 2.8, -0.5, 2.2, 0.6);
+    // cloud platforms painted into the backdrop (arena-art px coords)
+    this.solidPxRect(arena, 60, 428, 425, 520); // left cloud
+    this.solidPxRect(arena, 1245, 428, 1610, 520); // right cloud
+    this.solidPxRect(arena, 300, 535, 1290, 660); // big centre cloud
+
+    // walls + ceiling
+    this.solidRect(arena, this.bounds.minX - 1.2, this.bounds.minY - 2, this.bounds.minX - 0.1, this.bounds.maxY);
+    this.solidRect(arena, this.bounds.maxX + 0.1, this.bounds.minY - 2, this.bounds.maxX + 1.2, this.bounds.maxY);
+    this.solidRect(arena, this.bounds.minX, this.bounds.minY - 1.4, this.bounds.maxX, this.bounds.minY - 0.3);
+
+    // festival spears line the side walls (two tiers each side)
+    for (const baseY of [0.4, 3.4]) {
+      this.addHazard("spears", this.bounds.minX + 1.05, baseY, 1.9, {
+        labels: ["SKEWERED", "KEBAB'D", "PINCUSHION"],
+        fx: "star",
+        sfx: "thud",
+      });
+      this.addHazard("spears", this.bounds.maxX - 1.05, baseY, 1.9, {
+        flip: true,
+        labels: ["SKEWERED", "KEBAB'D", "PINCUSHION"],
+        fx: "star",
+        sfx: "thud",
+      });
+    }
 
     this.spawns = [
-      { pos: { x: -8.5, y: 1.2 }, angle: -Math.PI / 2 },
-      { pos: { x: 8.5, y: 1.2 }, angle: -Math.PI / 2 },
-      { pos: { x: -2.8, y: -1.4 }, angle: -Math.PI / 2 },
-      { pos: { x: 2.8, y: -1.4 }, angle: -Math.PI / 2 },
+      { pos: { x: -8.4, y: -1.4 }, angle: 0 },
+      { pos: { x: 8.4, y: -1.4 }, angle: 0 },
+      { pos: { x: -2.6, y: 0.1 }, angle: 0 },
+      { pos: { x: 2.6, y: 0.1 }, angle: 0 },
     ];
 
-    for (let i = 0; i < 14; i++) this.spawnBalloon(arena, true);
+    for (let i = 0; i < 12; i++) this.spawnBalloon(arena, true);
   }
 
   private spawnBalloon(arena: Arena, scatter = false) {
     const x = randRange(this.rng, this.bounds.minX + 2, this.bounds.maxX - 2);
-    const y = scatter ? randRange(this.rng, -8, 6) : this.killY - 0.5;
+    const y = scatter ? randRange(this.rng, -5.5, 3.5) : 6.2;
     const desc = RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(x, y)
       .setLinearDamping(1.15)
@@ -94,7 +95,7 @@ export class BalloonBoard extends Board {
     const balloon: Balloon = {
       color,
       gfx,
-      buoy: randRange(this.rng, 13.5, 15.0), // ~neutral for a goat holding one; two lift fast
+      buoy: randRange(this.rng, 13.5, 15.0),
       phase: randRange(this.rng, 0, 6.28),
       prop: {
         body,
@@ -120,7 +121,6 @@ export class BalloonBoard extends Board {
     arena.fx.ring(pos, b.color, 1.0);
     arena.sfx.play("pop", { rate: 0.8 + Math.random() * 0.5 });
     this.despawn(arena, b);
-    // keep the sky stocked
     this.spawnBalloon(arena);
   }
 
@@ -135,7 +135,7 @@ export class BalloonBoard extends Board {
     if (bi >= 0) this.balloons.splice(bi, 1);
   }
 
-  fixedStep(arena: Arena) {
+  fixedStep() {
     for (const b of this.balloons) {
       if (!b.prop.alive) continue;
       b.phase += 0.02;
@@ -145,10 +145,9 @@ export class BalloonBoard extends Board {
   }
 
   update(_dt: number, arena: Arena) {
-    // recycle balloons that escaped the top of the arena
     for (const b of [...this.balloons]) {
       const p = b.prop.body.translation();
-      if (p.y < this.bounds.minY - 1) {
+      if (p.y < this.bounds.minY + 0.3) {
         this.despawn(arena, b);
         this.spawnBalloon(arena);
       }
@@ -164,44 +163,31 @@ export class BalloonBoard extends Board {
     g.position.set(t.x, t.y);
     g.rotation = rot;
     const r = b.prop.radius;
-    // string
     g.moveTo(0, r).bezierCurveTo(0.1, r + 0.3, -0.1, r + 0.55, 0.04, r + 0.8).stroke({ width: 0.03, color: 0xffffff, alpha: 0.7 });
-    // body
     g.ellipse(0, 0, r * 0.92, r * 1.1).fill({ color: b.color });
     g.ellipse(-r * 0.3, -r * 0.4, r * 0.28, r * 0.4).fill({ color: 0xffffff, alpha: 0.4 });
-    // knot
     g.moveTo(-0.07, r).lineTo(0.07, r).lineTo(0, r + 0.12).fill({ color: b.color });
   }
 
   reset(arena: Arena) {
     this.killY = this.baseKillY;
-    // top up to a full sky
-    while (this.balloons.length < 14) this.spawnBalloon(arena);
+    while (this.balloons.length < 12) this.spawnBalloon(arena);
   }
 
   escalate(dt: number) {
-    this.killY = Math.max(2.5, this.killY - dt * 0.5); // the floor of doom rises
+    this.killY = Math.max(2.5, this.killY - dt * 0.4);
   }
 
   checkHazards(arena: Arena) {
+    super.checkHazards(arena);
     for (const goat of arena.goats) {
-      if (goat.dead) continue;
+      if (goat.dead || goat.eliminated || goat.invulnT > 0) continue;
       if (goat.pos.y > this.killY) {
         arena.fx.burst("impact", goat.pos, { n: 12 });
-        arena.fx.popText(goat.pos, pick(["SPLAT", "GRAVITY WINS", "TIMBER!", "BYE"]), goat.palette.body);
-        arena.fx.shake(10);
-        arena.sfx.play("thud");
-        goat.kill(arena);
+        arena.killGoat(goat, pick(["GRAVITY WINS", "TIMBER!", "GOODBYE", "SPLAT (eventually)"]));
       }
     }
   }
-}
-
-function cloud(g: Graphics, s: number) {
-  g.ellipse(0, 0, 1.6 * s, 0.7 * s).fill({ color: 0xffffff, alpha: 0.9 });
-  g.ellipse(-1.0 * s, 0.15 * s, 0.9 * s, 0.5 * s).fill({ color: 0xffffff, alpha: 0.9 });
-  g.ellipse(1.1 * s, 0.1 * s, 1.0 * s, 0.55 * s).fill({ color: 0xffffff, alpha: 0.9 });
-  g.ellipse(0.2 * s, -0.4 * s, 0.8 * s, 0.5 * s).fill({ color: 0xffffff, alpha: 0.9 });
 }
 
 function pick<T>(a: T[]): T {

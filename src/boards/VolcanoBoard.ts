@@ -1,62 +1,61 @@
 import { Graphics } from "pixi.js";
 import { Board, type TerrainTheme } from "./Board";
 import type { Arena } from "../core/types";
-import { randRange, makeRng } from "../core/math";
+import { makeRng, randRange } from "../core/math";
 
 const THEME: TerrainTheme = { top: 0x6b5b53, topLight: 0x8a7368, face: 0x413732, faceDark: 0x2a221f };
 
 export class VolcanoBoard extends Board {
   readonly name = "Cinder Cone";
-  readonly blurb = "A crumbly rock shelf over a very warm lake. Try not to become fondue.";
-  readonly tip = "Point your hooves at a rival and KICK to launch them off the ledge. Aim your whole body — that's the trick.";
+  readonly blurb = "Basalt islands in a lake of soup that eats goats.";
+  readonly tip = "Aim your hooves and KICK rivals into the lava — or into the molten glass at the edges. A boot to the head also settles arguments.";
   theme = THEME;
   gravityScale = 1;
 
-  bounds = { minX: -12, maxX: 12, minY: -9, maxY: 7 };
-
-  private lavaY = 4.0;
-  private baseLavaY = 4.0;
-  private lava = new Graphics();
-  private glow = new Graphics();
+  private baseLavaY = 4.05;
+  private lavaY = this.baseLavaY;
+  private lavaOverlay = new Graphics();
   private t = 0;
   private rng = makeRng(7);
 
   build(arena: Arena) {
-    // background
     this.bg.setGradient([
-      [0, "#2a0f18"],
-      [0.45, "#5a1a1e"],
-      [0.8, "#93341f"],
-      [1, "#d8631f"],
+      [0, "#2a1040"],
+      [1, "#4a1830"],
     ]);
-    const far = this.bg.addLayer(0.25);
-    const farG = new Graphics();
-    far.addChild(farG);
-    paintVolcano(farG);
-    const mid = this.bg.addLayer(0.5);
-    const midG = new Graphics();
-    mid.addChild(midG);
-    paintRidge(midG, 0x30161a, 5);
+    this.addBackdrop("volcano");
+    this.root.addChild(this.lavaOverlay);
 
-    // lava + glow live behind the platforms
-    this.root.addChild(this.glow);
-    this.root.addChild(this.lava);
+    // colliders matched to the painted rock pillars (arena-art px coords)
+    this.solidPxRect(arena, 0, 528, 385, 800); // left shelf
+    this.solidPxRect(arena, 600, 487, 1035, 800); // centre pillar
+    this.solidPxRect(arena, 1285, 522, 1672, 800); // right shelf
+    this.solidPxRect(arena, 452, 578, 568, 652); // floating stone L
+    this.solidPxRect(arena, 1080, 573, 1198, 647); // floating stone R
 
-    // platforms
-    this.solidBox(arena, -4, 0.6, 6.4, 1.2);
-    this.solidBox(arena, 4, 0.6, 6.4, 1.2);
-    this.solidBox(arena, 0, -3.2, 2.6, 0.7);
-    this.solidBox(arena, -7.2, -2.6, 3.0, 0.7);
-    this.solidBox(arena, 7.2, -2.6, 3.0, 0.7);
-    // little unstable stepping stones near the gap
-    this.solidBox(arena, -1.4, -1.1, 1.1, 0.5);
-    this.solidBox(arena, 1.4, -1.1, 1.1, 0.5);
+    // walls + ceiling so nobody leaves the painting
+    this.solidRect(arena, this.bounds.minX - 1.2, this.bounds.minY - 2, this.bounds.minX - 0.1, this.bounds.maxY);
+    this.solidRect(arena, this.bounds.maxX + 0.1, this.bounds.minY - 2, this.bounds.maxX + 1.2, this.bounds.maxY);
+    this.solidRect(arena, this.bounds.minX, this.bounds.minY - 1.4, this.bounds.maxX, this.bounds.minY - 0.3);
+
+    // molten obsidian shards guard the far edges
+    this.addHazard("lavaShards", this.bounds.minX + 1.15, 0.86, 2.0, {
+      labels: ["VITRIFIED", "SHARDED", "WELL DONE"],
+      fx: "ember",
+      sfx: "sizzle",
+    });
+    this.addHazard("lavaShards", this.bounds.maxX - 1.15, 0.78, 2.0, {
+      flip: true,
+      labels: ["VITRIFIED", "SHARDED", "WELL DONE"],
+      fx: "ember",
+      sfx: "sizzle",
+    });
 
     this.spawns = [
-      { pos: { x: -4, y: -1.2 }, angle: -Math.PI / 2 },
-      { pos: { x: 4, y: -1.2 }, angle: -Math.PI / 2 },
-      { pos: { x: -7.2, y: -3.6 }, angle: -Math.PI / 2 },
-      { pos: { x: 7.2, y: -3.6 }, angle: -Math.PI / 2 },
+      { pos: { x: -8.6, y: -0.2 }, angle: 0 },
+      { pos: { x: 8.8, y: -0.3 }, angle: 0 },
+      { pos: { x: -1.7, y: -0.8 }, angle: 0 },
+      { pos: { x: 2.0, y: -0.8 }, angle: 0 },
     ];
   }
 
@@ -65,99 +64,41 @@ export class VolcanoBoard extends Board {
   }
 
   escalate(dt: number) {
-    this.lavaY = Math.max(-0.4, this.lavaY - dt * 0.22); // creeps up in sudden death
+    this.lavaY = Math.max(0.2, this.lavaY - dt * 0.16);
   }
 
   update(dt: number, arena: Arena) {
     this.t += dt;
-    // occasional embers spitting from the lava
-    if (this.rng() < dt * 6) {
+    if (this.rng() < dt * 5) {
       const x = randRange(this.rng, this.bounds.minX, this.bounds.maxX);
-      arena.fx.burst("ember", { x, y: this.lavaY - 0.1 }, { n: 3 });
+      arena.fx.burst("ember", { x, y: this.lavaY + 0.3 }, { n: 2 });
     }
-    this.drawLava();
-  }
-
-  private drawLava() {
-    const { minX, maxX, maxY } = this.bounds;
-    const g = this.lava;
-    g.clear();
-    // wavy top surface
-    const steps = 48;
-    g.moveTo(minX, maxY + 2);
-    g.lineTo(minX, this.lavaY);
-    for (let i = 0; i <= steps; i++) {
-      const x = minX + ((maxX - minX) * i) / steps;
-      const y = this.lavaY + Math.sin(x * 1.3 + this.t * 2.2) * 0.12 + Math.sin(x * 4 - this.t * 3) * 0.05;
-      g.lineTo(x, y);
-    }
-    g.lineTo(maxX, maxY + 2);
-    g.closePath();
-    g.fill({ color: 0xff5a1a });
-    // hotter core
-    g.rect(minX, this.lavaY + 0.35, maxX - minX, maxY - this.lavaY + 2).fill({ color: 0xd63410, alpha: 0.5 });
-    // bright crest line
-    for (let i = 0; i <= steps; i++) {
-      const x = minX + ((maxX - minX) * i) / steps;
-      const y = this.lavaY + Math.sin(x * 1.3 + this.t * 2.2) * 0.12;
-      g.circle(x, y, 0.05).fill({ color: 0xffd76a, alpha: 0.8 });
-    }
-
-    // glow halo
-    this.glow.clear();
-    this.glow.rect(minX, this.lavaY - 1.6, maxX - minX, 1.6).fill({ color: 0xff7a2a, alpha: 0.16 });
-  }
-
-  checkHazards(arena: Arena) {
-    for (const goat of arena.goats) {
-      if (goat.dead) continue;
-      const p = goat.pos;
-      if (p.y > this.lavaY - 0.1 || p.x < this.bounds.minX - 1 || p.x > this.bounds.maxX + 1) {
-        arena.fx.burst("ember", p, { n: 16 });
-        arena.fx.burst("splash", p, { n: 6 });
-        arena.fx.ring(p, 0xffa53a, 1.6);
-        arena.fx.popText(p, pick(["FONDUE!", "MEDIUM RARE", "TOASTY", "SIZZLE"]), 0xffb347);
-        arena.fx.shake(14);
-        arena.sfx.play("sizzle");
-        goat.kill(arena);
+    // rising-lava overlay becomes visible during sudden death
+    this.lavaOverlay.clear();
+    if (this.lavaY < this.baseLavaY - 0.05) {
+      const { minX, maxX, maxY } = this.bounds;
+      this.lavaOverlay
+        .rect(minX, this.lavaY, maxX - minX, maxY - this.lavaY + 1)
+        .fill({ color: 0xff5a1a, alpha: 0.82 });
+      for (let x = minX; x < maxX; x += 0.5) {
+        const y = this.lavaY + Math.sin(x * 1.3 + this.t * 2.4) * 0.09;
+        this.lavaOverlay.circle(x, y, 0.07).fill({ color: 0xffd76a, alpha: 0.85 });
       }
     }
   }
-}
 
-function paintVolcano(g: Graphics) {
-  // a big dark cone with a glowing crater
-  g.moveTo(-9, 4);
-  g.lineTo(-2.4, -5.2);
-  g.lineTo(-0.8, -5.2);
-  g.lineTo(2.2, 4);
-  g.fill({ color: 0x1f0e12 });
-  g.moveTo(3, 4);
-  g.lineTo(8, -3.6);
-  g.lineTo(9.5, -3.6);
-  g.lineTo(12, 4);
-  g.fill({ color: 0x24121a });
-  // crater glow
-  g.ellipse(-1.6, -5.1, 1.1, 0.4).fill({ color: 0xff7a2a, alpha: 0.8 });
-  g.ellipse(-1.6, -5.3, 0.6, 0.25).fill({ color: 0xffd158, alpha: 0.9 });
-  // lava dribble
-  g.moveTo(-1.8, -4.9);
-  g.bezierCurveTo(-1.5, -2, -1.9, 1, -1.4, 3.8);
-  g.stroke({ width: 0.18, color: 0xff6a24, alpha: 0.7 });
-}
-
-function paintRidge(g: Graphics, color: number, peaks: number) {
-  g.moveTo(-13, 6);
-  let x = -13;
-  for (let i = 0; i < peaks; i++) {
-    const w = 26 / peaks;
-    g.lineTo(x + w * 0.5, 1 + Math.sin(i * 2.3) * 1.2);
-    g.lineTo(x + w, 4);
-    x += w;
+  checkHazards(arena: Arena) {
+    super.checkHazards(arena);
+    for (const goat of arena.goats) {
+      if (goat.dead || goat.eliminated || goat.invulnT > 0) continue;
+      if (goat.pos.y > this.lavaY + 0.15) {
+        arena.fx.burst("ember", goat.pos, { n: 16 });
+        arena.fx.burst("splash", goat.pos, { n: 6 });
+        arena.sfx.play("sizzle");
+        arena.killGoat(goat, pick(["FONDUE!", "MEDIUM RARE", "TOASTY", "SOUP"]), { x: 0, y: -2.5 });
+      }
+    }
   }
-  g.lineTo(13, 6);
-  g.closePath();
-  g.fill({ color });
 }
 
 function pick<T>(a: T[]): T {

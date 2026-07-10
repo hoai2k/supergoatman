@@ -4,6 +4,7 @@ import { Camera } from "./Camera";
 import { FxSystem } from "../render/Fx";
 import { Background } from "../render/Background";
 import { Goat } from "../entities/Goat";
+import { Ragdoll } from "../entities/Ragdoll";
 import { GoatAI } from "../ai/GoatAI";
 import type { Board } from "../boards/Board";
 import type { InputHub, Source } from "./Input";
@@ -11,7 +12,7 @@ import type { AudioBus } from "./Audio";
 import type { Arena } from "./types";
 import { GRAVITY, MATCH, type Palette } from "../config";
 import { neutralIntent, type Intent } from "./intent";
-import type { Vec2 } from "./math";
+import { dist, type Vec2 } from "./math";
 
 export interface PlayerConfig {
   index: number;
@@ -30,6 +31,7 @@ export class Match {
   bg: Background;
   goats: Goat[] = [];
   private ai = new Map<number, GoatAI>();
+  private ragdolls: Ragdoll[] = [];
 
   world = new Container(); // scaled/positioned by camera
   private terrainLayer = new Container();
@@ -40,11 +42,8 @@ export class Match {
   private phaseT = 0;
   private hitstop = 0;
   playTime = 0;
-  round = 0;
-  scores: number[] = [];
-  lastRoundWinner = -1;
   onMatchOver?: (winner: number) => void;
-  onRoundEvent?: (kind: "intro" | "go" | "roundOver" | "matchOver", data?: unknown) => void;
+  onRoundEvent?: (kind: "intro" | "go" | "kill" | "matchOver", data?: unknown) => void;
 
   constructor(
     public stageRoot: Container,
@@ -66,14 +65,16 @@ export class Match {
       props: [],
       fx: this.fx,
       sfx: this.audio,
+      bounds: board.bounds,
+      killGoat: (g, cause, impulse, byPlayer) => this.killGoat(g, cause, impulse, byPlayer),
     };
 
     this.board.bg = this.bg;
     this.board.build(this.arena);
     this.terrainLayer.addChild(this.board.root);
     this.camera.bounds = this.board.bounds;
+    this.camera.viewRect = this.board.bounds;
 
-    this.scores = players.map(() => 0);
     for (const pc of players) {
       const sp = board.spawnFor(pc.index);
       const goat = new Goat(this.physics, pc.palette, pc.index, sp.pos, sp.angle);
@@ -83,35 +84,89 @@ export class Match {
       if (pc.source.kind === "ai") this.ai.set(pc.index, new GoatAI(pc.source.level));
     }
 
-    this.startRound();
-  }
-
-  private startRound() {
-    this.round++;
     this.phase = "intro";
     this.phaseT = 0;
-    this.playTime = 0;
-    this.board.reset(this.arena);
-    for (let i = 0; i < this.goats.length; i++) {
-      const sp = this.board.spawnFor(this.players[i].index);
-      this.goats[i].respawn(sp.pos, sp.angle);
-    }
     this.onRoundEvent?.("intro");
     this.audio.play("whistle");
   }
 
-  private aliveGoats(): Goat[] {
-    return this.goats.filter((g) => !g.dead);
+  // ---- death & respawn ----------------------------------------------------
+  private killGoat(goat: Goat, cause: string, impulse?: Vec2, byPlayer?: number) {
+    if (goat.dead || goat.eliminated || goat.invulnT > 0 || this.phase !== "play") return;
+    goat.lives--;
+
+    // the moment of transformation: live sprite -> jointed sprite-part ragdoll
+    this.ragdolls.push(
+      new Ragdoll(
+        this.arena,
+        goat.skin,
+        goat.pos,
+        goat.angle,
+        goat.vel,
+        goat.body.angvel(),
+        this.goatLayer,
+        impulse,
+      ),
+    );
+
+    this.fx.burst("impact", goat.pos, { n: 14 });
+    this.fx.ring(goat.pos, goat.palette.body, 1.4);
+    this.fx.shake(11);
+    this.fx.popText({ x: goat.pos.x, y: goat.pos.y - 0.7 }, cause, goat.palette.body);
+    this.audio.play("thud", { rate: 0.7 });
+    this.hitstop = 0.14;
+
+    goat.enterDeadState(this.arena);
+    this.onRoundEvent?.("kill", { victim: goat.playerIndex, cause, byPlayer });
+
+    if (goat.eliminated) {
+      this.fx.popText({ x: goat.pos.x, y: goat.pos.y - 1.3 }, "ELIMINATED!", 0xffffff);
+      this.audio.play("cheer", { volume: 0.5 });
+    }
+  }
+
+  private respawnDueGoats(dt: number) {
+    for (const goat of this.goats) {
+      if (!goat.dead || goat.eliminated) continue;
+      goat.respawnT -= dt;
+      if (goat.respawnT <= 0) {
+        const sp = this.safestSpawn(goat);
+        goat.respawn(sp.pos, sp.angle);
+        this.fx.ring(sp.pos, goat.palette.body, 1.0);
+        this.audio.play("blip");
+      }
+    }
+  }
+
+  /** Spawn farthest from living opponents. */
+  private safestSpawn(goat: Goat) {
+    const foes = this.goats.filter((g) => g !== goat && !g.dead && !g.eliminated);
+    let best = this.board.spawnFor(goat.playerIndex);
+    let bestScore = -Infinity;
+    for (let i = 0; i < this.board.spawns.length; i++) {
+      const s = this.board.spawns[i];
+      const score = foes.length
+        ? Math.min(...foes.map((f) => dist(f.pos, s.pos)))
+        : Math.random() * 2;
+      if (score > bestScore) {
+        bestScore = score;
+        best = s;
+      }
+    }
+    return best;
+  }
+
+  /** Goats still contending (alive now, or waiting to respawn with lives). */
+  private contenders(): Goat[] {
+    return this.goats.filter((g) => !g.eliminated);
   }
 
   update(dt: number) {
-    // input.update() is driven once per frame by the Game loop
-
     // ---- intents ----
     const controlling = this.phase === "play";
     for (const goat of this.goats) {
       let intent: Intent = neutralIntent();
-      if (controlling && !goat.dead) {
+      if (controlling && !goat.dead && !goat.eliminated) {
         const pc = this.players[goat.playerIndex];
         if (pc.source.kind === "ai") {
           intent = this.ai.get(pc.index)!.think(goat, this.arena, dt);
@@ -122,12 +177,10 @@ export class Match {
       goat.setIntent(intent);
     }
 
-    // brief slow-mo when a goat gets got
-    const aliveBefore = this.aliveGoats().length;
     let sdt = dt;
     if (this.hitstop > 0) {
       this.hitstop -= dt;
-      sdt = dt * 0.4;
+      sdt = dt * 0.35;
     }
 
     // ---- fixed-step simulation ----
@@ -138,15 +191,20 @@ export class Match {
 
     // ---- render sync ----
     for (const goat of this.goats) goat.sync();
+    for (let i = this.ragdolls.length - 1; i >= 0; i--) {
+      if (!this.ragdolls[i].update(sdt)) {
+        this.ragdolls[i].destroy(this.arena);
+        this.ragdolls.splice(i, 1);
+      }
+    }
     this.board.update(sdt, this.arena);
     this.fx.update(sdt);
 
-    // ---- phase / rules ----
+    // ---- rules ----
     this.tickPhase(dt);
-    if (this.aliveGoats().length < aliveBefore) this.hitstop = 0.16;
 
     // ---- camera ----
-    const pts: Vec2[] = this.aliveGoats().map((g) => g.pos);
+    const pts: Vec2[] = this.goats.filter((g) => !g.dead && !g.eliminated).map((g) => g.pos);
     this.board.decorateCameraPoints?.(pts);
     if (pts.length) this.camera.frame(pts);
     this.camera.update(dt);
@@ -170,36 +228,33 @@ export class Match {
     if (this.phase === "play") {
       this.playTime += dt;
       this.board.checkHazards(this.arena);
+      this.respawnDueGoats(dt);
       if (this.playTime > MATCH.suddenDeathAfter) this.board.escalate?.(dt, this.arena);
 
-      const alive = this.aliveGoats();
-      if (alive.length <= 1 && this.goats.length > 1) {
+      const left = this.contenders();
+      if (left.length <= 1 && this.goats.length > 1) {
         this.phase = "outro";
         this.phaseT = 0;
-        const winner = alive.length === 1 ? alive[0].playerIndex : -1;
-        this.lastRoundWinner = winner;
+        const winner = left.length === 1 ? left[0].playerIndex : -1;
+        this.winnerIndex = winner;
         if (winner >= 0) {
-          this.scores[winner]++;
-          this.fx.popText(alive[0].pos, "WINNER!", alive[0].palette.body);
+          const g = left[0];
+          if (!g.dead) this.fx.popText(g.pos, "LAST GOAT STANDING!", g.palette.body);
           this.audio.play("cheer");
         }
-        this.onRoundEvent?.("roundOver", winner);
       }
       return;
     }
     if (this.phase === "outro") {
-      if (this.phaseT >= MATCH.roundOutroTime) {
-        const winIdx = this.scores.findIndex((s) => s >= MATCH.pointsToWin);
-        if (winIdx >= 0) {
-          this.phase = "done";
-          this.onRoundEvent?.("matchOver", winIdx);
-          this.onMatchOver?.(winIdx);
-        } else {
-          this.startRound();
-        }
+      if (this.phaseT >= MATCH.outroTime) {
+        this.phase = "done";
+        this.onRoundEvent?.("matchOver", this.winnerIndex);
+        this.onMatchOver?.(this.winnerIndex);
       }
     }
   }
+
+  winnerIndex = -1;
 
   resize(w: number, h: number) {
     this.camera.resize(w, h);
@@ -207,6 +262,8 @@ export class Match {
   }
 
   destroy() {
+    for (const r of this.ragdolls) r.destroy(this.arena);
+    this.ragdolls.length = 0;
     this.board.destroy(this.arena);
     for (const g of this.goats) g.destroy(this.arena);
     this.bg.destroy();

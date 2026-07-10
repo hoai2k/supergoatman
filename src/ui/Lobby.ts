@@ -2,17 +2,11 @@ import { Container, Graphics, Sprite, Texture } from "pixi.js";
 import type { Screen } from "./Screen";
 import { type Game, sourceLabel, type Slot } from "../core/Game";
 import { mkText, panel, COL, buttonGlyph } from "./theme";
-import { renderGoat, ANCHOR } from "../render/GoatArt";
+import { goatPreview, PREVIEW_ANCHOR } from "../render/goatPreview";
 import { PALETTES } from "../config";
 
-const previews: Texture[] = [];
 function preview(idx: number): Texture {
-  if (!previews[idx]) {
-    const t = Texture.from(renderGoat(PALETTES[idx], 0.15, 0.1));
-    t.source.scaleMode = "linear";
-    previews[idx] = t;
-  }
-  return previews[idx];
+  return goatPreview(PALETTES[idx]);
 }
 
 class Card {
@@ -25,8 +19,8 @@ class Card {
   private t = 0;
 
   constructor() {
-    this.goat.anchor.set(ANCHOR.x, ANCHOR.y);
-    this.goat.scale.set(0.62);
+    this.goat.anchor.set(PREVIEW_ANCHOR.x, PREVIEW_ANCHOR.y);
+    this.goat.scale.set(0.36);
     this.title.position.set(0, 74);
     this.sub.position.set(0, 104);
     this.hintL.position.set(0, 132);

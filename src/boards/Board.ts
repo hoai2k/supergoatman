@@ -1,12 +1,13 @@
-import { Container, Graphics } from "pixi.js";
+import { Container, Graphics, Sprite } from "pixi.js";
 import { RAPIER } from "../core/rapier";
 import type { RigidBody } from "../core/rapier";
-import { CG, groups } from "../config";
+import { ARENA_RECT, CG, groups } from "../config";
 import type { CamBounds } from "../core/Camera";
 import type { Arena, Prop } from "../core/types";
 import type { Vec2 } from "../core/math";
 import type { Background } from "../render/Background";
 import type { Goat } from "../entities/Goat";
+import { arenaTexture, hazardTexture, type HazardKind } from "../render/assets";
 
 export interface TerrainTheme {
   top: number;
@@ -23,7 +24,17 @@ export interface Spawn {
 
 export interface Solid {
   body: RigidBody;
-  gfx: Container;
+  gfx: Container | null;
+}
+
+export interface HazardZone {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+  label: string[];
+  fx: string; // particle burst kind
+  sfx: string;
 }
 
 /** Base class for a battle board: terrain, props, hazards, win-flavoured logic. */
@@ -36,18 +47,23 @@ export abstract class Board {
   root = new Container(); // world-space terrain + props
   bg!: Background; // assigned by the Match before build()
   spawns: Spawn[] = [];
-  bounds: CamBounds = { minX: -20, maxX: 20, minY: -14, maxY: 12 };
+  bounds: CamBounds = { ...ARENA_RECT };
   gravityScale = 1;
 
   protected solids: Solid[] = [];
+  protected hazardZones: HazardZone[] = [];
+  /** Debug: collider rects drawn when #dbgcol is in the URL. */
+  debugRects: { x: number; y: number; w: number; h: number; lethal: boolean }[] = [];
 
   abstract build(arena: Arena): void;
   // called once per rendered frame
   update(_dt: number, _arena: Arena): void {}
   // called once per fixed physics step
   fixedStep(_arena: Arena): void {}
-  // eliminate goats that touched something lethal; return killed goats
-  checkHazards(_arena: Arena): void {}
+  /** Kill goats that touched something lethal. Overrides should call super. */
+  checkHazards(arena: Arena): void {
+    this.checkHazardZones(arena);
+  }
   // reset props/hazards between rounds
   reset(_arena: Arena): void {}
   // optional: escalate during sudden death (raise lava, shrink stage...)
@@ -61,14 +77,61 @@ export abstract class Board {
     return this.spawns[i % this.spawns.length];
   }
 
+  // ---- painted backdrop ----------------------------------------------------
+  /** Place the arena painting so it exactly fills the world rect. */
+  protected addBackdrop(boardId: string) {
+    const tex = arenaTexture(boardId);
+    const sp = new Sprite(tex);
+    const w = this.bounds.maxX - this.bounds.minX;
+    const h = this.bounds.maxY - this.bounds.minY;
+    sp.width = w;
+    sp.height = h;
+    sp.position.set(this.bounds.minX, this.bounds.minY);
+    this.root.addChildAt(sp, 0);
+  }
+
+  /** Convert arena-art pixel coords (1672x941) to world coords. */
+  protected px(x: number, y: number): Vec2 {
+    const w = this.bounds.maxX - this.bounds.minX;
+    const h = this.bounds.maxY - this.bounds.minY;
+    return {
+      x: this.bounds.minX + (x / 1672) * w,
+      y: this.bounds.minY + (y / 941) * h,
+    };
+  }
+
   // ---- terrain helpers ---------------------------------------------------
+  /** Invisible static collider matched to painted scenery. */
+  solidRect(arena: Arena, x0: number, y0: number, x1: number, y1: number): Solid {
+    const cx = (x0 + x1) / 2;
+    const cy = (y0 + y1) / 2;
+    const desc = RAPIER.RigidBodyDesc.fixed().setTranslation(cx, cy);
+    const body = arena.physics.world.createRigidBody(desc);
+    const col = RAPIER.ColliderDesc.cuboid((x1 - x0) / 2, (y1 - y0) / 2)
+      .setFriction(0.95)
+      .setRestitution(0.0)
+      .setCollisionGroups(groups(CG.TERRAIN, CG.GOAT | CG.PROP));
+    arena.physics.world.createCollider(col, body);
+    const solid = { body, gfx: null };
+    this.solids.push(solid);
+    this.debugRects.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0, lethal: false });
+    return solid;
+  }
+
+  /** Invisible static collider from arena-art pixel coords. */
+  solidPxRect(arena: Arena, px0: number, py0: number, px1: number, py1: number): Solid {
+    const a = this.px(px0, py0);
+    const b = this.px(px1, py1);
+    return this.solidRect(arena, a.x, a.y, b.x, b.y);
+  }
+
   solidBox(
     arena: Arena,
     x: number,
     y: number,
     w: number,
     h: number,
-    opts: { angle?: number; friction?: number; theme?: TerrainTheme } = {},
+    opts: { angle?: number; friction?: number; theme?: TerrainTheme; invisible?: boolean } = {},
   ): Solid {
     const desc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, y).setRotation(opts.angle ?? 0);
     const body = arena.physics.world.createRigidBody(desc);
@@ -78,23 +141,93 @@ export abstract class Board {
       .setCollisionGroups(groups(CG.TERRAIN, CG.GOAT | CG.PROP));
     arena.physics.world.createCollider(col, body);
 
-    const g = new Graphics();
-    paintPlatform(g, w, h, opts.theme ?? this.theme);
-    g.position.set(x, y);
-    g.rotation = opts.angle ?? 0;
-    this.root.addChild(g);
+    let g: Graphics | null = null;
+    if (!opts.invisible) {
+      g = new Graphics();
+      paintPlatform(g, w, h, opts.theme ?? this.theme);
+      g.position.set(x, y);
+      g.rotation = opts.angle ?? 0;
+      this.root.addChild(g);
+    }
+    this.debugRects.push({ x: x - w / 2, y: y - h / 2, w, h, lethal: false });
     const solid = { body, gfx: g };
     this.solids.push(solid);
     return solid;
   }
 
-  ramp(arena: Arena, x: number, y: number, w: number, h: number, angle: number): Solid {
-    return this.solidBox(arena, x, y, w, h, { angle });
-  }
-
   fixedAnchor(arena: Arena, x: number, y: number): RigidBody {
     const desc = RAPIER.RigidBodyDesc.fixed().setTranslation(x, y);
     return arena.physics.world.createRigidBody(desc);
+  }
+
+  // ---- deadly edge obstacles ------------------------------------------------
+  /**
+   * Place a hazard sprite from the atlas and register its kill zone.
+   * The sprite sits with its base at (x, baseY), `height` world units tall,
+   * mirrored when `flip` is true.
+   */
+  protected addHazard(
+    kind: HazardKind,
+    x: number,
+    baseY: number,
+    height: number,
+    opts: { flip?: boolean; labels?: string[]; fx?: string; sfx?: string; zonePad?: number } = {},
+  ) {
+    const tex = hazardTexture(kind);
+    const sp = new Sprite(tex);
+    const scale = height / 1.0; // atlas art is roughly square
+    sp.anchor.set(0.5, 1);
+    sp.width = height * 1.0;
+    sp.height = height;
+    if (opts.flip) sp.scale.x = -Math.abs(sp.scale.x);
+    sp.position.set(x, baseY);
+    this.root.addChild(sp);
+    void scale;
+
+    const pad = opts.zonePad ?? 0.18;
+    const halfW = height * 0.5 - pad;
+    this.hazardZones.push({
+      minX: x - halfW,
+      maxX: x + halfW,
+      minY: baseY - height + pad * 1.6,
+      maxY: baseY - 0.02,
+      label: opts.labels ?? ["SKEWERED", "POKED", "PERFORATED"],
+      fx: opts.fx ?? "impact",
+      sfx: opts.sfx ?? "thud",
+    });
+    const z = this.hazardZones[this.hazardZones.length - 1];
+    this.debugRects.push({ x: z.minX, y: z.minY, w: z.maxX - z.minX, h: z.maxY - z.minY, lethal: true });
+  }
+
+  /** Mirror-place the same hazard at both far edges of the arena. */
+  protected addEdgeHazards(
+    kind: HazardKind,
+    baseY: number,
+    height: number,
+    inset = 0.55,
+    opts: { labels?: string[]; fx?: string; sfx?: string } = {},
+  ) {
+    this.addHazard(kind, this.bounds.minX + inset + height * 0.28, baseY, height, { ...opts });
+    this.addHazard(kind, this.bounds.maxX - inset - height * 0.28, baseY, height, {
+      ...opts,
+      flip: true,
+    });
+  }
+
+  protected checkHazardZones(arena: Arena) {
+    for (const goat of arena.goats) {
+      if (goat.dead || goat.eliminated || goat.invulnT > 0) continue;
+      const p = goat.pos;
+      const r = goat.radius * 0.55; // forgiving: need real contact, not a graze
+      for (const z of this.hazardZones) {
+        if (p.x + r > z.minX && p.x - r < z.maxX && p.y + r > z.minY && p.y - r < z.maxY) {
+          arena.fx.burst(z.fx, p, { n: 14 });
+          arena.sfx.play(z.sfx);
+          arena.killGoat(goat, pick(z.label));
+          break;
+        }
+      }
+    }
   }
 
   removeProp(arena: Arena, prop: Prop) {
@@ -114,20 +247,19 @@ export abstract class Board {
   }
 }
 
+function pick<T>(a: T[]): T {
+  return a[(Math.random() * a.length) | 0];
+}
+
 export function paintPlatform(g: Graphics, w: number, h: number, th: TerrainTheme) {
   const hw = w / 2;
   const hh = h / 2;
   const r = Math.min(0.2, hh * 0.7, hw * 0.7);
-  // drop shadow / underside
   g.roundRect(-hw, -hh + 0.06, w, h, r).fill({ color: th.faceDark });
-  // main face
   g.roundRect(-hw, -hh, w, h - 0.04, r).fill({ color: th.face });
-  // top cap
   const cap = Math.min(0.24, h * 0.55);
   g.roundRect(-hw, -hh, w, cap, r).fill({ color: th.top });
-  // top highlight
   g.roundRect(-hw + 0.08, -hh + 0.03, w - 0.16, 0.05, 0.025).fill({ color: th.topLight });
-  // grass tufts
   if (th.grass) {
     for (let gx = -hw + 0.35; gx < hw - 0.2; gx += 0.7) {
       g.moveTo(gx, -hh + 0.02);

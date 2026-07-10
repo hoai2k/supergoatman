@@ -2,8 +2,7 @@ import { Container, Graphics, Sprite } from "pixi.js";
 import type { Screen } from "./Screen";
 import type { Game } from "../core/Game";
 import { mkText, COL, panel } from "./theme";
-import { goatPreview } from "../render/goatPreview";
-import { ANCHOR } from "../render/GoatArt";
+import { goatPreview, PREVIEW_ANCHOR } from "../render/goatPreview";
 import { makeRng, randRange } from "../core/math";
 
 interface Confetti {
@@ -34,7 +33,7 @@ export class ResultsScreen implements Screen {
 
   constructor(private game: Game, private winner: number) {
     this.container.addChild(this.bg, this.confGfx, this.content, this.buttons);
-    this.goat.anchor.set(ANCHOR.x, ANCHOR.y);
+    this.goat.anchor.set(PREVIEW_ANCHOR.x, PREVIEW_ANCHOR.y);
     this.content.addChild(this.goat);
     for (let i = 0; i < 90; i++) this.spawnConfetti(true);
   }
@@ -73,8 +72,8 @@ export class ResultsScreen implements Screen {
     }
     this.drawConfetti();
     this.goat.rotation = Math.sin(this.t * 2.2) * 0.18;
-    this.goat.scale.set(1.5 + Math.sin(this.t * 3) * 0.06);
-    this.goat.position.set(0, -10 + Math.sin(this.t * 3) * 8);
+    this.goat.scale.set(0.8 + Math.sin(this.t * 3) * 0.04);
+    this.goat.position.set(0, 60 + Math.sin(this.t * 3) * 8);
 
     const nav = this.mergedNav();
     if (nav.left) {
@@ -139,9 +138,9 @@ export class ResultsScreen implements Screen {
     if (win) this.goat.texture = goatPreview(win.palette);
     this.content.addChild(this.goat);
     const title = mkText(win ? `${win.name} WINS!` : "NOBODY WINS", { size: 64, weight: "900", fill: color, stroke: COL.ink, strokeW: 10 });
-    title.position.set(0, -150);
+    title.position.set(0, -190);
     const sub = mkText("last goat standing", { size: 26, weight: "700", fill: COL.dim });
-    sub.position.set(0, 96);
+    sub.position.set(0, 250);
     this.content.addChild(title, sub);
     this.content.position.set(w / 2, h * 0.4);
 

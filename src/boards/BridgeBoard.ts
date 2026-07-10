@@ -1,17 +1,18 @@
-import { Container, Graphics } from "pixi.js";
+import { Sprite } from "pixi.js";
 import { RAPIER } from "../core/rapier";
 import type { RigidBody } from "../core/rapier";
 import { Board, type TerrainTheme } from "./Board";
 import { CG, groups } from "../config";
 import type { Arena, Prop } from "../core/types";
-import { makeRng, randRange } from "../core/math";
+import { makeRng } from "../core/math";
+import { tex } from "../render/assets";
 
 const THEME: TerrainTheme = { top: 0x9a6b3f, topLight: 0xc79a5f, face: 0x74502f, faceDark: 0x4f371f };
 
 interface Plank {
   body: RigidBody;
   prop: Prop;
-  gfx: Graphics;
+  sprite: Sprite;
   restX: number;
   restY: number;
   broken: boolean;
@@ -19,73 +20,76 @@ interface Plank {
 
 export class BridgeBoard extends Board {
   readonly name = "Wobble Gorge";
-  readonly blurb = "A rope bridge with commitment issues, strung over a bottomless canyon.";
-  readonly tip = "The bridge is a trampoline. STOMP-kick the planks near a rival to fling them skyward — or just off the edge.";
+  readonly blurb = "One rope bridge. Four goats. A canyon with excellent acoustics for screaming.";
+  readonly tip = "The bridge is a trampoline — STOMP-kick planks to launch whoever's standing on them. The stakes at the edges raise the, well, stakes.";
   theme = THEME;
   gravityScale = 1;
-  bounds = { minX: -16, maxX: 16, minY: -12, maxY: 11 };
 
   private planks: Plank[] = [];
-  private layer = new Container();
-  private ropeGfx = new Graphics();
-  private killY = 8.5;
+  private killY = 7.2;
   private rng = makeRng(2024);
   private breakT = 0;
 
   build(arena: Arena) {
     this.bg.setGradient([
-      [0, "#3a2a52"],
-      [0.4, "#8a4a5e"],
-      [0.75, "#e08a4e"],
-      [1, "#ffd08a"],
+      [0, "#e08a4e"],
+      [1, "#3a2a52"],
     ]);
-    const far = this.bg.addLayer(0.2);
-    const mesa = new Graphics();
-    paintMesas(mesa, this.rng, 0x5a3550);
-    far.addChild(mesa);
-    const mid = this.bg.addLayer(0.45);
-    const mesa2 = new Graphics();
-    paintMesas(mesa2, this.rng, 0x74404a);
-    mid.addChild(mesa2);
+    this.addBackdrop("bridge");
 
-    // cliffs
-    this.solidBox(arena, -11, 4, 10, 9);
-    this.solidBox(arena, 11, 4, 10, 9);
-    // little back walls so you can't just roll off backwards forever
-    this.solidBox(arena, -16.5, 0, 1, 20);
-    this.solidBox(arena, 16.5, 0, 1, 20);
+    // cliffs matched to the painting (arena-art px coords)
+    this.solidPxRect(arena, 0, 428, 295, 941); // left cliff
+    this.solidPxRect(arena, 1362, 432, 1672, 941); // right cliff
 
-    this.root.addChild(this.layer);
-    this.root.addChild(this.ropeGfx);
+    // walls + ceiling
+    this.solidRect(arena, this.bounds.minX - 1.2, this.bounds.minY - 2, this.bounds.minX - 0.1, this.bounds.maxY);
+    this.solidRect(arena, this.bounds.maxX + 0.1, this.bounds.minY - 2, this.bounds.maxX + 1.2, this.bounds.maxY);
+    this.solidRect(arena, this.bounds.minX, this.bounds.minY - 1.4, this.bounds.maxX, this.bounds.minY - 0.3);
 
     this.buildBridge(arena);
 
+    // sharpened stakes on the cliff tops against the walls
+    this.addHazard("stakes", this.bounds.minX + 1.05, -0.58, 1.8, {
+      labels: ["STAKED", "SPLINTERED", "FENCED"],
+      fx: "dust",
+      sfx: "thud",
+    });
+    this.addHazard("stakes", this.bounds.maxX - 1.05, -0.52, 1.8, {
+      flip: true,
+      labels: ["STAKED", "SPLINTERED", "FENCED"],
+      fx: "dust",
+      sfx: "thud",
+    });
+
     this.spawns = [
-      { pos: { x: -8, y: -1.4 }, angle: -Math.PI / 2 },
-      { pos: { x: 8, y: -1.4 }, angle: -Math.PI / 2 },
-      { pos: { x: -3, y: -1.4 }, angle: -Math.PI / 2 },
-      { pos: { x: 3, y: -1.4 }, angle: -Math.PI / 2 },
+      { pos: { x: -9.6, y: -1.6 }, angle: 0 },
+      { pos: { x: 9.6, y: -1.6 }, angle: 0 },
+      { pos: { x: -3.6, y: -1.4 }, angle: 0 },
+      { pos: { x: 3.6, y: -1.4 }, angle: 0 },
     ];
   }
 
   private buildBridge(arena: Arena) {
+    const left = -7.7;
+    const right = 7.5;
+    const leftY = -0.5;
+    const rightY = -0.45;
     const N = 16;
-    const left = -6;
-    const right = 6;
     const span = right - left;
     const w = span / N;
     const halfW = w / 2 - 0.02;
     const halfH = 0.09;
+    const plankTex = tex("plank");
 
-    const leftAnchor = this.fixedAnchor(arena, left, 0);
-    const rightAnchor = this.fixedAnchor(arena, right, 0);
+    const leftAnchor = this.fixedAnchor(arena, left, leftY);
+    const rightAnchor = this.fixedAnchor(arena, right, rightY);
 
     let prev: RigidBody = leftAnchor;
     let prevIsAnchor = true;
     for (let i = 0; i < N; i++) {
       const u = (i + 0.5) / N;
       const restX = left + w * (i + 0.5);
-      const restY = Math.sin(Math.PI * u) * 0.7; // gentle sag
+      const restY = leftY + (rightY - leftY) * u + Math.sin(Math.PI * u) * 0.85; // sag
       const desc = RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(restX, restY)
         .setLinearDamping(0.4)
@@ -98,38 +102,47 @@ export class BridgeBoard extends Board {
         .setCollisionGroups(groups(CG.PROP, CG.TERRAIN | CG.GOAT));
       arena.physics.world.createCollider(col, body);
 
-      // join to previous
       const a1 = prevIsAnchor ? { x: 0, y: 0 } : { x: halfW, y: 0 };
-      const a2 = { x: -halfW, y: 0 };
-      const jd = RAPIER.JointData.revolute(new RAPIER.Vector2(a1.x, a1.y), new RAPIER.Vector2(a2.x, a2.y));
+      const jd = RAPIER.JointData.revolute(
+        new RAPIER.Vector2(a1.x, a1.y),
+        new RAPIER.Vector2(-halfW, 0),
+      );
       arena.physics.world.createImpulseJoint(jd, prev, body, true);
 
-      const g = new Graphics();
-      g.roundRect(-halfW, -0.11, halfW * 2, 0.22, 0.05).fill({ color: THEME.top });
-      g.roundRect(-halfW, -0.11, halfW * 2, 0.07, 0.04).fill({ color: THEME.topLight });
-      this.layer.addChild(g);
+      const sprite = new Sprite(plankTex);
+      sprite.anchor.set(0.5, 0.52);
+      sprite.width = w * 1.06;
+      sprite.height = w * 0.5;
+      this.root.addChild(sprite);
 
       const plank: Plank = {
         body,
-        gfx: g,
+        sprite,
         restX,
         restY,
         broken: false,
-        prop: { body, radius: halfW, kind: "plank", grabbable: true, kickable: true, alive: true, onKick: (dir) => body.applyImpulse({ x: dir.x * 0.8, y: dir.y * 1.4 }, true) },
+        prop: {
+          body,
+          radius: halfW,
+          kind: "plank",
+          grabbable: true,
+          kickable: true,
+          alive: true,
+          onKick: (dir) => body.applyImpulse({ x: dir.x * 0.8, y: dir.y * 1.4 }, true),
+        },
       };
       arena.props.push(plank.prop);
       this.planks.push(plank);
       prev = body;
       prevIsAnchor = false;
     }
-    // final joint to right anchor
     const last = this.planks[this.planks.length - 1].body;
     const jd = RAPIER.JointData.revolute(new RAPIER.Vector2(halfW, 0), new RAPIER.Vector2(0, 0));
     arena.physics.world.createImpulseJoint(jd, last, rightAnchor, true);
   }
 
   fixedStep() {
-    // suspension springs pull each plank back to rest -> bouncy trampoline
+    // suspension springs pull each plank toward rest -> bouncy trampoline
     for (const p of this.planks) {
       if (p.broken) continue;
       const t = p.body.translation();
@@ -140,47 +153,30 @@ export class BridgeBoard extends Board {
     }
   }
 
-  update(_dt: number, arena: Arena) {
-    void arena;
-    // reposition persistent plank slats + redraw the ropes
-    this.ropeGfx.clear();
-    const pts: { x: number; y: number }[] = [];
+  update(_dt: number, _arena: Arena) {
     for (const p of this.planks) {
       if (p.broken) continue;
       const t = p.body.translation();
-      p.gfx.position.set(t.x, t.y);
-      p.gfx.rotation = p.body.rotation();
-      pts.push({ x: t.x, y: t.y });
-    }
-    // rope lines along the top of the bridge
-    if (pts.length) {
-      this.ropeGfx.moveTo(-6, 0);
-      for (const pt of pts) this.ropeGfx.lineTo(pt.x, pt.y - 0.16);
-      this.ropeGfx.lineTo(6, 0);
-      this.ropeGfx.stroke({ width: 0.05, color: 0x3a2a1a, alpha: 0.8 });
-      this.ropeGfx.moveTo(-6, 0);
-      for (const pt of pts) this.ropeGfx.lineTo(pt.x, pt.y + 0.16);
-      this.ropeGfx.lineTo(6, 0);
-      this.ropeGfx.stroke({ width: 0.05, color: 0x3a2a1a, alpha: 0.6 });
+      p.sprite.position.set(t.x, t.y);
+      p.sprite.rotation = p.body.rotation();
     }
   }
 
   reset() {
-    this.killY = 8.5;
+    this.killY = 7.2;
   }
 
   escalate(dt: number, arena: Arena) {
     this.breakT -= dt;
     if (this.breakT <= 0) {
-      this.breakT = 2.2;
+      this.breakT = 2.4;
       const alive = this.planks.filter((p) => !p.broken);
-      if (alive.length > 4) {
-        // snap a plank near the middle for maximum drama
+      if (alive.length > 5) {
         const mid = alive[Math.floor(alive.length / 2) + ((this.rng() * 3) | 0) - 1];
         if (mid) {
           mid.broken = true;
           mid.prop.alive = false;
-          mid.gfx.visible = false;
+          mid.sprite.visible = false;
           const t = mid.body.translation();
           for (const g of arena.goats) g.releaseIfGrabbing(mid.body, arena);
           arena.physics.world.removeRigidBody(mid.body);
@@ -195,27 +191,15 @@ export class BridgeBoard extends Board {
   }
 
   checkHazards(arena: Arena) {
+    super.checkHazards(arena);
     for (const goat of arena.goats) {
-      if (goat.dead) continue;
+      if (goat.dead || goat.eliminated || goat.invulnT > 0) continue;
       if (goat.pos.y > this.killY) {
         arena.fx.burst("dust", goat.pos, { n: 10 });
-        arena.fx.popText(goat.pos, pick(["WILHELM!", "SO LONG", "CANYONED", "SEE YA"]), goat.palette.body);
-        arena.fx.shake(9);
         arena.sfx.play("kickair");
-        goat.kill(arena);
+        arena.killGoat(goat, pick(["WILHELM!", "CANYONED", "SEE YA", "LONG WAY DOWN"]));
       }
     }
-  }
-}
-
-function paintMesas(g: Graphics, rng: () => number, color: number) {
-  let x = -18;
-  while (x < 18) {
-    const w = randRange(rng, 3, 6);
-    const h = randRange(rng, 2, 5);
-    g.rect(x, 8 - h, w, h + 4).fill({ color });
-    g.rect(x, 8 - h, w, 0.4).fill({ color: 0xffffff, alpha: 0.08 });
-    x += w + randRange(rng, 0.5, 2);
   }
 }
 

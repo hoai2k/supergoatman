@@ -1,45 +1,58 @@
-import { Container, Graphics, Sprite } from "pixi.js";
+import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { mkText, COL } from "./theme";
-import { goatPreview } from "../render/goatPreview";
+import { goatPreview, PREVIEW_ANCHOR } from "../render/goatPreview";
 import { MATCH } from "../config";
 import type { Match } from "../core/Match";
-import { ANCHOR } from "../render/GoatArt";
 
-class ScoreCard {
+class LivesCard {
   root = new Container();
-  private pips: Graphics;
+  private livesText: Text;
+  private goat: Sprite;
+  private frame: Graphics;
   private color: number;
+  private lastLives = -1;
+  private eliminated = false;
 
   constructor(name: string, color: number, palette: import("../config").Palette) {
     this.color = color;
-    const bg = new Graphics();
-    bg.roundRect(0, 0, 182, 58, 14).fill({ color: 0x1c1630, alpha: 0.82 });
-    bg.roundRect(0, 0, 182, 58, 14).stroke({ color, width: 3, alpha: 0.9 });
-    const goat = new Sprite(goatPreview(palette));
-    goat.anchor.set(ANCHOR.x, ANCHOR.y);
-    goat.scale.set(0.26);
-    goat.position.set(26, 30);
+    this.frame = new Graphics();
+    this.drawFrame(false);
+    this.goat = new Sprite(goatPreview(palette));
+    this.goat.anchor.set(PREVIEW_ANCHOR.x, PREVIEW_ANCHOR.y);
+    this.goat.scale.set(0.15);
+    this.goat.position.set(30, 32);
     const label = mkText(name, { size: 18, weight: "900", fill: color, anchorX: 0, anchorY: 0.5 });
-    label.position.set(60, 17);
-    this.pips = new Graphics();
-    this.pips.position.set(62, 40);
-    this.root.addChild(bg, goat, label, this.pips);
+    label.position.set(62, 17);
+    this.livesText = mkText("♥ ×9", { size: 20, weight: "900", fill: 0xffffff, anchorX: 0, anchorY: 0.5 });
+    this.livesText.position.set(62, 40);
+    this.root.addChild(this.frame, this.goat, label, this.livesText);
   }
 
-  setScore(score: number) {
-    const g = this.pips;
-    g.clear();
-    for (let i = 0; i < MATCH.pointsToWin; i++) {
-      const x = i * 20;
-      if (i < score) g.circle(x, 0, 7).fill({ color: this.color });
-      else g.circle(x, 0, 7).fill({ color: 0xffffff, alpha: 0.14 });
+  private drawFrame(dead: boolean) {
+    this.frame.clear();
+    this.frame.roundRect(0, 0, 182, 58, 14).fill({ color: 0x1c1630, alpha: dead ? 0.55 : 0.82 });
+    this.frame.roundRect(0, 0, 182, 58, 14).stroke({ color: dead ? 0x555060 : this.color, width: 3, alpha: 0.9 });
+  }
+
+  setLives(lives: number, eliminated: boolean) {
+    if (lives === this.lastLives && eliminated === this.eliminated) return;
+    this.lastLives = lives;
+    this.eliminated = eliminated;
+    if (eliminated) {
+      this.livesText.text = "☠ OUT";
+      this.livesText.style.fill = 0x8a8494;
+      this.goat.alpha = 0.35;
+      this.drawFrame(true);
+    } else {
+      this.livesText.text = `♥ ×${lives}`;
+      this.livesText.style.fill = lives <= 2 ? 0xff5d5d : 0xffffff;
     }
   }
 }
 
 export class HUD {
   root = new Container();
-  private cards: ScoreCard[] = [];
+  private cards: LivesCard[] = [];
   private sudden = mkText("", { size: 26, weight: "900", fill: COL.bad, stroke: COL.ink, strokeW: 6 });
   private vw = 1280;
 
@@ -47,7 +60,7 @@ export class HUD {
     this.root.removeChildren();
     this.cards = [];
     for (const p of match.players) {
-      const c = new ScoreCard(p.name, p.palette.body, p.palette);
+      const c = new LivesCard(p.name, p.palette.body, p.palette);
       this.cards.push(c);
       this.root.addChild(c.root);
     }
@@ -68,9 +81,11 @@ export class HUD {
   }
 
   update(match: Match) {
-    for (let i = 0; i < this.cards.length; i++) this.cards[i].setScore(match.scores[i]);
-    const remaining = MATCH.suddenDeathAfter - match.playTime;
-    if (match.phase === "play" && remaining < 0) {
+    for (let i = 0; i < this.cards.length; i++) {
+      const g = match.goats[i];
+      this.cards[i].setLives(g.lives, g.eliminated);
+    }
+    if (match.phase === "play" && match.playTime > MATCH.suddenDeathAfter) {
       this.sudden.visible = true;
       this.sudden.text = "⚠ SUDDEN DEATH ⚠";
       this.sudden.scale.set(1 + Math.sin(match.playTime * 8) * 0.06);

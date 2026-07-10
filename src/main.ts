@@ -1,5 +1,6 @@
 import { Application } from "pixi.js";
 import { initRapier } from "./core/rapier";
+import { loadAssets } from "./render/assets";
 import { Game } from "./core/Game";
 import { TitleScreen } from "./ui/TitleScreen";
 import { LobbyScreen } from "./ui/Lobby";
@@ -8,7 +9,7 @@ import { MatchScreen } from "./ui/MatchScreen";
 import { ResultsScreen } from "./ui/Results";
 
 async function boot() {
-  await initRapier();
+  await Promise.all([initRapier(), loadAssets()]);
   const app = new Application();
   await app.init({
     background: "#171226",
@@ -64,34 +65,35 @@ async function boot() {
 }
 
 async function showPoses(app: Application) {
-  const { Container, Sprite, Texture, Text } = await import("pixi.js");
-  const { renderGoat, ANCHOR } = await import("./render/GoatArt");
+  const { Container, Sprite, Text } = await import("pixi.js");
+  const { getSkin } = await import("./render/GoatSprites");
   const { PALETTES } = await import("./config");
   const root = new Container();
   app.stage.addChild(root);
-  const poses: [string, number, number][] = [
-    ["neutral", 0, 0],
-    ["kick", 1, 0],
-    ["grab", 0, 1],
-    ["both", 1, 1],
-  ];
-  const rots = [-Math.PI / 2, 0, Math.PI / 2, Math.PI]; // upright, lying, etc.
-  poses.forEach(([label, k, g], i) => {
-    const pal = PALETTES[i * 2];
-    rots.forEach((rot, j) => {
-      const s = new Sprite(Texture.from(renderGoat(pal, k, g)));
-      s.anchor.set(ANCHOR.x, ANCHOR.y);
-      s.scale.set(1.4);
-      s.rotation = rot;
-      s.position.set(200 + i * 300, 180 + j * 150);
+  // columns: palettes; rows: neutral frame, kick frame, ragdoll parts spread
+  PALETTES.forEach((pal, i) => {
+    const skin = getSkin(pal);
+    const x = 110 + i * 155;
+    for (const [j, frame] of [skin.neutral, skin.kick].entries()) {
+      const s = new Sprite(frame.tex);
+      s.anchor.set(frame.anchor.x, frame.anchor.y);
+      s.scale.set(0.22);
+      s.position.set(x, 130 + j * 170);
+      root.addChild(s);
+    }
+    skin.parts.forEach((part, k) => {
+      const s = new Sprite(part.tex);
+      s.anchor.set(0.5);
+      s.scale.set(0.2);
+      s.position.set(x + (k % 2) * 60 - 30, 440 + Math.floor(k / 2) * 90);
       root.addChild(s);
     });
-    const t = new Text({ text: label, style: { fill: 0xffffff, fontSize: 22, fontWeight: "800", fontFamily: "system-ui" } });
+    const t = new Text({ text: pal.name, style: { fill: 0xffffff, fontSize: 15, fontWeight: "800", fontFamily: "system-ui" } });
     t.anchor.set(0.5);
-    t.position.set(200 + i * 300, 40);
+    t.position.set(x, 30);
     root.addChild(t);
   });
-  const hint = new Text({ text: "rows: upright / lying / inverted / backwards", style: { fill: 0x9a90b0, fontSize: 18, fontFamily: "system-ui" } });
+  const hint = new Text({ text: "rows: neutral / kick / ragdoll parts", style: { fill: 0x9a90b0, fontSize: 18, fontFamily: "system-ui" } });
   hint.position.set(20, app.screen.height - 30);
   root.addChild(hint);
 }

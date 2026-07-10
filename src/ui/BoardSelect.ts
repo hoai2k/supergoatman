@@ -1,9 +1,10 @@
-import { Container, Graphics } from "pixi.js";
+import { Container, Graphics, Sprite } from "pixi.js";
 import type { Screen } from "./Screen";
 import type { Game } from "../core/Game";
 import { mkText, COL } from "./theme";
 import { BOARDS } from "../boards";
 import { clamp } from "../core/math";
+import { arenaTexture } from "../render/assets";
 
 interface Meta {
   id: string;
@@ -15,25 +16,18 @@ interface Meta {
 
 const DIFF = ["Chill", "Normal", "Feral"];
 
-function boardIcon(g: Graphics, id: string, s: number, accent: number) {
-  g.clear();
-  if (id === "balloon") {
-    for (const [dx, c] of [[-0.5, 0xff5d5d], [0.5, 0x4fc3ff], [0, 0xffd23f]] as const) {
-      g.ellipse(dx * s, -0.1 * s, 0.28 * s, 0.34 * s).fill({ color: c });
-      g.moveTo(dx * s, 0.24 * s).lineTo(dx * s, 0.55 * s).stroke({ width: 0.03 * s, color: 0xffffff, alpha: 0.6 });
-    }
-  } else if (id === "bridge") {
-    g.moveTo(-0.7 * s, -0.2 * s).quadraticCurveTo(0, 0.4 * s, 0.7 * s, -0.2 * s).stroke({ width: 0.08 * s, color: accent });
-    for (let i = -0.6; i <= 0.6; i += 0.2) g.rect(i * s, (0.05 + Math.abs(i) * -0.3 + 0.15) * s * 0.0 + 0.1 * s, 0.1 * s, 0.14 * s).fill({ color: 0x9a6b3f });
-  } else if (id === "underwater") {
-    for (let i = 0; i < 3; i++) g.moveTo(-0.7 * s, (-0.2 + i * 0.25) * s).quadraticCurveTo(0, (0.0 + i * 0.25) * s, 0.7 * s, (-0.2 + i * 0.25) * s).stroke({ width: 0.05 * s, color: accent, alpha: 0.8 });
-    g.circle(0.2 * s, -0.3 * s, 0.1 * s).fill({ color: 0xbfeaff, alpha: 0.8 });
-  } else {
-    // volcano
-    g.moveTo(-0.6 * s, 0.4 * s).lineTo(-0.15 * s, -0.4 * s).lineTo(0.15 * s, -0.4 * s).lineTo(0.6 * s, 0.4 * s).fill({ color: 0x3a2a2a });
-    g.ellipse(0, -0.4 * s, 0.16 * s, 0.07 * s).fill({ color: 0xffb347 });
-    g.moveTo(-0.05 * s, -0.38 * s).bezierCurveTo(0.0, 0.0, -0.1, 0.2 * s, 0.05 * s, 0.4 * s).stroke({ width: 0.05 * s, color: 0xff6a24 });
-  }
+/** Tile preview: the actual arena painting behind a rounded mask. */
+function boardThumb(id: string, w: number, h: number): Container {
+  const c = new Container();
+  const sp = new Sprite(arenaTexture(id));
+  const scale = Math.max(w / sp.texture.width, h / sp.texture.height);
+  sp.anchor.set(0.5);
+  sp.scale.set(scale);
+  const mask = new Graphics();
+  mask.roundRect(-w / 2, -h / 2, w, h, 16).fill({ color: 0xffffff });
+  c.addChild(sp, mask);
+  sp.mask = mask;
+  return c;
 }
 
 export class BoardSelectScreen implements Screen {
@@ -146,12 +140,11 @@ export class BoardSelectScreen implements Screen {
       const p = new Graphics();
       p.roundRect(-tileW / 2, -tileW / 2, tileW, tileW, 20).fill({ color: 0x241a38 });
       p.roundRect(-tileW / 2, -tileW / 2, tileW, tileW, 20).stroke({ color: m.accent, width: 4 });
-      const icon = new Graphics();
-      boardIcon(icon, m.id, tileW * 0.7, m.accent);
-      icon.position.set(0, -tileW * 0.06);
+      const thumb = boardThumb(m.id, tileW - 10, tileW * 0.62);
+      thumb.position.set(0, -tileW * 0.1);
       const label = mkText(m.name, { size: 17, weight: "800", fill: COL.cream });
       label.position.set(0, tileW / 2 - 22);
-      tile.addChild(p, icon, label);
+      tile.addChild(p, thumb, label);
       tile.position.set(-total / 2 + tileW / 2 + i * (tileW + gap), 0);
       this.tiles.addChild(tile);
     }

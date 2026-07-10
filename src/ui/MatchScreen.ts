@@ -29,23 +29,35 @@ export class MatchScreen implements Screen {
     this.match.onRoundEvent = (kind, data) => this.onRoundEvent(kind, data);
     (window as unknown as { __match: Match }).__match = this.match;
 
+    // debug: draw collider + kill rects over the painted arena (#dbgcol)
+    if (location.hash.includes("dbgcol")) {
+      const dbg = new Graphics();
+      for (const r of this.match.board.debugRects) {
+        dbg
+          .rect(r.x, r.y, r.w, r.h)
+          .stroke({ width: 0.04, color: r.lethal ? 0xff3355 : 0x33ff88, alpha: 0.9 });
+        if (r.lethal) dbg.rect(r.x, r.y, r.w, r.h).fill({ color: 0xff3355, alpha: 0.15 });
+      }
+      this.match.world.addChild(dbg);
+    }
+
     this.banner.addChild(this.bannerText);
     this.container.addChild(this.hud.root, this.banner);
     this.hud.build(this.match);
+    this.onRoundEvent("intro"); // constructor fired before our handler attached
     this.buildPause();
     this.container.addChild(this.pauseOverlay);
     this.pauseOverlay.visible = false;
   }
 
   private onRoundEvent(kind: string, data?: unknown) {
-    if (kind === "intro") this.showBanner(`ROUND ${this.match.round}`, COL.accent, 1.6);
+    if (kind === "intro") this.showBanner("9 LIVES. NO REFUNDS.", COL.accent, 1.7);
     else if (kind === "go") this.showBanner("GOAT!", COL.good, 0.8);
-    else if (kind === "roundOver") {
-      const w = data as number;
-      if (w >= 0) {
-        const p = this.match.players[w];
-        this.showBanner(`${p.name} SCORES`, p.palette.body, 2.2);
-      } else this.showBanner("DRAW", COL.dim, 2.0);
+    else if (kind === "kill") {
+      const d = data as { victim: number; cause: string };
+      const p = this.match.players[d.victim];
+      const g = this.match.goats[d.victim];
+      if (g.eliminated) this.showBanner(`${p.name} IS OUT`, p.palette.body, 1.6);
     }
   }
 

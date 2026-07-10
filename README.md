@@ -10,7 +10,8 @@ friends into lava, off bridges, into sea-urchins, and out of the sky. Bring cont
 
 - **2–4 local players** on one screen, plus **CPU goats** to fill the roster (three skill levels: Chill / Normal / Feral).
 - **XBox / gamepad first** (up to 4 pads), with keyboard fallback for two players.
-- **VS mode**, last-goat-standing rounds, first to 5 wins.
+- **VS mode**: every goat has **9 lives**. Lose one and you ragdoll apart, then respawn — until you're out. Last goat standing wins.
+- Ways to die: booted square in the **head**, shoved into the **deadly obstacles** at every arena's edges (spears, urchins, stakes, molten glass), the arena's own specialty (lava, the void, the canyon) — or held by the scruff and **twisted** until physics gives up on you.
 - Every goat is **recolourable** — pick your bright, silly colour in the lobby.
 
 ## Controls
@@ -30,23 +31,28 @@ floppy control **is** the game.
 
 ## The arenas
 
-- **Cloud Nine** — grab balloons to ride the sky, kick balloons to pop them, don't fall into the void (which slowly rises).
-- **Wobble Gorge** — a springy rope bridge over a bottomless canyon. Stomp-kick planks to trampoline rivals off the edge.
-- **The Deep End** — neutral-buoyancy swimming (each kick is a stroke), scuba tanks, and spiked floor & ceiling to boot rivals into.
-- **Cinder Cone** — a crumbly rock shelf over a lake of lava. Kick opponents in. Try not to become fondue.
+Each arena is a painted backdrop with physics colliders matched to the scenery, and themed
+deadly obstacles guarding the far left and right edges.
+
+- **Cloud Nine** — cloud platforms in a balloon festival. Grab balloons to ride the sky, kick them to pop. Ceremonial spears line the walls.
+- **Wobble Gorge** — a springy plank bridge over a canyon. Stomp-kick planks to trampoline rivals; sharpened stakes wait on the cliff tops.
+- **The Deep End** — neutral-buoyancy reef swimming (each kick is a stroke) with scuba tanks. Urchin colonies own the walls.
+- **Cinder Cone** — basalt islands in a lava lake, bracketed by molten obsidian shards. Try not to become fondue.
 
 ## The goat
 
-Drawn procedurally in code (no asset files) as a single smooth Super-Bunny-Man-style capsule
-body with stubby limbs and a simple face — but with curved **goat horns** where the bunny's ears
-would be. It's recoloured natively per player, the collider is kept tight to the body, and the
-torso stays anchored while a leg snaps out on a kick.
+The character is a painted plush goat (neutral + kicking poses). Each player's colour is made
+by hue-rotating the plush pixels so all the soft shading survives; horns, hooves, and muzzle
+stay untouched. The physics collider is a **convex hull traced from the sprite's silhouette**,
+and the kick frame is anchored so the head/torso stay planted while the legs stretch out.
+On death the same sprite is cut into head/torso/legs and reassembled as a jointed ragdoll at
+the exact same position — so the goat falls apart mid-air without a visual pop.
 
 ## Tech
 
 Vite + TypeScript, **PixiJS v8** (WebGL rendering, per-player recolouring, particles),
-**Rapier2D** (deterministic, stable physics), Web Gamepad API. All art is drawn procedurally and
-all sound is synthesized in the browser — nothing to download.
+**Rapier2D** (deterministic, stable physics), Web Gamepad API. Backgrounds, character, and
+hazards are painted assets in `assets/`; sound is synthesized in the browser.
 
 ## Develop
 

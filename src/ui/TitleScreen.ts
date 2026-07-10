@@ -2,7 +2,7 @@ import { Container, Graphics, Sprite, Texture } from "pixi.js";
 import type { Screen } from "./Screen";
 import type { Game } from "../core/Game";
 import { mkText, COL, buttonGlyph } from "./theme";
-import { renderGoat, ANCHOR } from "../render/GoatArt";
+import { goatPreview, PREVIEW_ANCHOR } from "../render/goatPreview";
 import { PALETTES } from "../config";
 import { makeRng, randRange } from "../core/math";
 
@@ -30,10 +30,9 @@ export class TitleScreen implements Screen {
     this.container.addChild(this.bg, this.blobs);
     for (let i = 0; i < 4; i++) {
       const pal = PALETTES[i * 2];
-      const tex = Texture.from(renderGoat(pal, 0.2, 0.1));
-      const s = new Sprite(tex);
-      s.anchor.set(ANCHOR.x, ANCHOR.y);
-      s.scale.set(0.9);
+      const s = new Sprite(goatPreview(pal));
+      s.anchor.set(PREVIEW_ANCHOR.x, PREVIEW_ANCHOR.y);
+      s.scale.set(0.42);
       this.container.addChild(s);
       this.goats.push({ sprite: s, x: 0, y: 0, vx: randRange(this.rng, -30, 30), spin: randRange(this.rng, -0.6, 0.6), bob: randRange(this.rng, 12, 30), phase: randRange(this.rng, 0, 6.3) });
     }

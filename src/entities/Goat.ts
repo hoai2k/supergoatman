@@ -1,9 +1,10 @@
-import { Container, Sprite, Graphics } from "pixi.js";
+import { Container, Sprite } from "pixi.js";
 import { RAPIER } from "../core/rapier";
 import type { RigidBody } from "../core/rapier";
-import { GOAT, CG, groups, FIXED_DT, type Palette } from "../config";
+import { GOAT, CG, groups, FIXED_DT, LIVES, type Palette } from "../config";
 import {
   add,
+  angleDelta,
   clamp,
   closestOnSegment,
   norm,
@@ -14,13 +15,19 @@ import {
 } from "../core/math";
 import type { Intent } from "../core/intent";
 import { neutralIntent } from "../core/intent";
-import type { Arena, Prop } from "../core/types";
-import { getSkin, type GoatSkin } from "../render/GoatSkin";
+import type { Arena } from "../core/types";
+import { getSkin, type GoatSkin } from "../render/GoatSprites";
+import {
+  BODY_RADIUS,
+  FEET_LOCAL,
+  HAND_LOCAL,
+  HEAD_LOCAL,
+  HEAD_RADIUS,
+  HULL_LOCAL,
+  PX2U,
+} from "../render/goatgeom";
 
-const HAND_LOCAL: Vec2 = { x: GOAT.halfLen + GOAT.radius + 0.02, y: 0 };
-const FOOT_LOCAL: Vec2 = { x: -(GOAT.halfLen + GOAT.radius), y: 0 };
-
-type GrabTarget = { body: RigidBody; kind: string };
+type GrabTarget = { body: RigidBody; kind: string; neckHold: boolean };
 
 export class Goat {
   body: RigidBody;
@@ -29,27 +36,30 @@ export class Goat {
   skin: GoatSkin;
   view: Container;
   private sprite: Sprite;
-  private grabGfx: Graphics;
 
   playerIndex: number;
   palette: Palette;
-  alive = true;
-  dead = false;
+
+  lives = LIVES;
+  alive = true; // controllable right now
+  dead = false; // ragdolling / waiting to respawn
+  eliminated = false; // out of lives for good
+  respawnT = 0;
+  invulnT = 0;
 
   private intent: Intent = neutralIntent();
   private prevKick = false;
   private pendingKick = false;
 
-  private kicking = 0; // seconds remaining in active window
+  private kicking = 0;
   private kickCd = 0;
   private kickAmt = 0;
-  private grabAmt = 0;
   private kickHits = new Set<unknown>();
 
   private grabJoint: RAPIER.ImpulseJoint | null = null;
   private grabTarget: GrabTarget | null = null;
-
-  private blink = Math.random() * GOAT.eyeBlinkEvery;
+  private twistAccum = 0;
+  private lastRelAngle = 0;
 
   constructor(
     physics: Arena["physics"],
@@ -72,32 +82,32 @@ export class Goat {
     this.world = physics.world;
     this.body = physics.world.createRigidBody(bodyDesc);
 
-    const colDesc = RAPIER.ColliderDesc.capsule(GOAT.halfLen, GOAT.radius)
-      .setRotation(Math.PI / 2) // lay the capsule horizontal (long axis = local X)
+    // Convex hull matched to the neutral sprite's silhouette — tight to the art.
+    const hullDesc = RAPIER.ColliderDesc.convexHull(new Float32Array(HULL_LOCAL));
+    const colDesc = (
+      hullDesc ??
+      RAPIER.ColliderDesc.capsule(GOAT.halfLen, GOAT.radius).setRotation(Math.PI / 2)
+    )
       .setDensity(GOAT.density)
       .setFriction(GOAT.friction)
       .setRestitution(GOAT.restitution)
       .setCollisionGroups(groups(CG.GOAT, CG.TERRAIN | CG.GOAT | CG.PROP));
     this.collider = physics.world.createCollider(colDesc, this.body);
 
-    // ---- view ----
     this.view = new Container();
-    this.sprite = new Sprite(this.skin.frame(0, 0));
-    this.sprite.anchor.set(this.skin.anchor.x, this.skin.anchor.y);
-    this.sprite.scale.set(1 / this.skin.ppu);
+    this.sprite = new Sprite(this.skin.neutral.tex);
+    this.sprite.anchor.set(this.skin.neutral.anchor.x, this.skin.neutral.anchor.y);
+    this.sprite.scale.set(PX2U);
     this.view.addChild(this.sprite);
-    this.grabGfx = new Graphics();
   }
 
   attach(world: Container) {
-    world.addChild(this.grabGfx);
     world.addChild(this.view);
   }
 
   private accessories: Container[] = [];
-  /** Add a decoration (world units, local to body centre) that tumbles with the goat. */
   addAccessory(node: Container) {
-    this.view.addChildAt(node, 0); // behind the sprite by default
+    this.view.addChildAt(node, 0);
     this.accessories.push(node);
   }
   clearAccessories() {
@@ -117,6 +127,12 @@ export class Goat {
     const lv = this.body.linvel();
     return { x: lv.x, y: lv.y };
   }
+  get radius(): number {
+    return BODY_RADIUS;
+  }
+  headWorld(): Vec2 {
+    return this.localToWorld(HEAD_LOCAL);
+  }
   private headDir(): Vec2 {
     return rotate({ x: 1, y: 0 }, this.angle);
   }
@@ -132,11 +148,10 @@ export class Goat {
 
   // ---- one fixed physics step -------------------------------------------
   fixedStep(arena: Arena) {
-    if (this.dead) return;
+    if (this.dead || this.eliminated) return;
     const dt = FIXED_DT;
     this.kickCd = Math.max(0, this.kickCd - dt);
-    this.blink -= dt;
-    if (this.blink < 0) this.blink += GOAT.eyeBlinkEvery;
+    this.invulnT = Math.max(0, this.invulnT - dt);
 
     if (this.alive) {
       this.applyRoll();
@@ -145,18 +160,14 @@ export class Goat {
     }
     this.pendingKick = false;
 
-    // kick active window
     if (this.kicking > 0) {
       this.kicking -= dt;
       this.sweepKick(arena);
       if (this.kicking <= 0) this.kickHits.clear();
     }
 
-    // limb pose easing
     const kTarget = this.kicking > 0 ? kickCurve(1 - this.kicking / GOAT.kickActiveTime) : 0;
     this.kickAmt += (kTarget - this.kickAmt) * clamp(dt * 22, 0, 1);
-    const gTarget = this.alive && (this.intent.grab || this.grabJoint) ? 1 : 0;
-    this.grabAmt += (gTarget - this.grabAmt) * clamp(dt * 16, 0, 1);
   }
 
   private applyRoll() {
@@ -166,7 +177,6 @@ export class Goat {
     if (Math.sign(roll) !== Math.sign(av) || Math.abs(av) < GOAT.maxRollSpeed) {
       this.body.applyTorqueImpulse(roll * GOAT.rollTorque, true);
     }
-    // gentle rolling grip when in contact with the ground
     if (this.groundedDown()) {
       this.body.applyImpulse({ x: roll * GOAT.groundRollAssist * FIXED_DT, y: 0 }, true);
     }
@@ -178,27 +188,38 @@ export class Goat {
     this.kickHits.clear();
     const grounded = this.feetGrounded();
     const power = GOAT.kickImpulse * (grounded ? 1 : GOAT.kickAirScale);
-    const launch = scale(this.headDir(), power);
-    this.body.applyImpulse(launch, true);
+    this.body.applyImpulse(scale(this.headDir(), power), true);
     this.body.applyTorqueImpulse(this.intent.roll * GOAT.kickSpin, true);
-    const feet = this.localToWorld(FOOT_LOCAL);
+    const feet = this.localToWorld(FEET_LOCAL);
     arena.sfx.play(grounded ? "kick" : "kickair", { rate: 0.9 + Math.random() * 0.2 });
     if (grounded) arena.fx.burst("dust", feet, { n: 7 });
   }
 
   private sweepKick(arena: Arena) {
-    const feet = this.localToWorld(FOOT_LOCAL);
-    const dir = scale(this.headDir(), -1); // legs sweep toward the tail
+    const feet = this.localToWorld(FEET_LOCAL);
+    const dir = scale(this.headDir(), -1); // legs extend toward the tail
     const end = add(feet, scale(dir, GOAT.kickReach));
 
     for (const other of arena.goats) {
-      if (other === this || other.dead) continue;
+      if (other === this || other.dead || other.eliminated) continue;
       if (this.kickHits.has(other)) continue;
       const c = closestOnSegment(other.pos, feet, end);
-      if (c.dist < GOAT.kickWidth + GOAT.radius) {
+      if (c.dist < GOAT.kickWidth + BODY_RADIUS) {
         this.kickHits.add(other);
         const away = norm(sub(other.pos, feet));
-        const imp = { x: away.x * GOAT.kickKnockback, y: away.y * GOAT.kickKnockback - GOAT.kickUpBias * GOAT.kickKnockback };
+        const imp = {
+          x: away.x * GOAT.kickKnockback,
+          y: away.y * GOAT.kickKnockback - GOAT.kickUpBias * GOAT.kickKnockback,
+        };
+
+        // A hoof square to the skull is lethal (very Super Bunny Man).
+        const headHit = closestOnSegment(other.headWorld(), feet, end);
+        if (headHit.dist < HEAD_RADIUS + GOAT.kickWidth * 0.55 && other.invulnT <= 0) {
+          arena.killGoat(other, "BOOTED", { x: imp.x * 0.35, y: imp.y * 0.35 - 1.2 }, this.playerIndex);
+          this.body.applyImpulse(scale(imp, -0.18), true);
+          continue;
+        }
+
         other.body.applyImpulse(imp, true);
         other.body.applyTorqueImpulse((Math.random() - 0.5) * 0.25, true);
         this.body.applyImpulse(scale(imp, -0.22), true);
@@ -206,7 +227,6 @@ export class Goat {
         arena.fx.shake(6);
         arena.fx.popText(add(other.pos, { x: 0, y: -0.5 }), pick(THWACKS), this.palette.body);
         arena.sfx.play("thud", { rate: 0.85 + Math.random() * 0.3 });
-        other.onKicked(this.playerIndex);
       }
     }
 
@@ -223,81 +243,96 @@ export class Goat {
     }
   }
 
-  onKicked(_byPlayer: number) {
-    // hook for scoring / last-hitter tracking; overridden by match if needed
-    this.lastHitBy = _byPlayer;
-    this.lastHitAt = 0;
-  }
-  lastHitBy = -1;
-  lastHitAt = 999;
-
-  // ---- grab --------------------------------------------------------------
+  // ---- grab (+ the neck-twist murder technique) ---------------------------
   private updateGrab(arena: Arena) {
     const wantGrab = this.intent.grab;
     if (this.grabJoint) {
-      const t = this.grabTarget;
-      const targetGone = t && t.kind === "goat" && this.findGoatByBody(arena, t.body)?.dead;
-      if (!wantGrab || targetGone) this.releaseGrab(arena);
+      const t = this.grabTarget!;
+      const victim = t.kind === "goat" ? this.findGoatByBody(arena, t.body) : undefined;
+      if (!wantGrab || (t.kind === "goat" && (!victim || victim.dead))) {
+        this.releaseGrab(arena);
+        return;
+      }
+      // holding a goat by the scruff and wrenching it all the way around
+      if (victim && t.neckHold) {
+        const rel = angleDelta(this.angle, victim.angle);
+        const d = Math.abs(angleDelta(this.lastRelAngle, rel));
+        this.lastRelAngle = rel;
+        this.twistAccum = Math.max(0, this.twistAccum + d - FIXED_DT * 1.2);
+        if (this.twistAccum > 2.6 && victim.invulnT <= 0) {
+          const fling = norm(sub(victim.pos, this.pos));
+          arena.killGoat(victim, "NECKED", { x: fling.x * 2, y: fling.y * 2 - 1 }, this.playerIndex);
+          this.releaseGrab(arena);
+        }
+      }
       return;
     }
     if (!wantGrab) return;
 
     const hand = this.localToWorld(HAND_LOCAL);
-    let best: { body: RigidBody; point: Vec2; kind: string; d: number } | null = null;
+    let best: { body: RigidBody; point: Vec2; kind: string; d: number; neckHold: boolean } | null =
+      null;
 
-    // terrain via ray from the body out through the hand
     const dir = this.headDir();
     const hit = arena.physics.castRay(
       this.pos,
       dir,
-      GOAT.halfLen + GOAT.radius + GOAT.grabReach,
+      0.5 + GOAT.grabReach,
       groups(0xffff, CG.TERRAIN),
       this.body,
     );
     if (hit) {
       const parent = hit.collider.parent();
-      if (parent) best = { body: parent, point: hit.point, kind: "wall", d: hit.toi };
+      if (parent) best = { body: parent, point: hit.point, kind: "wall", d: hit.toi, neckHold: false };
     }
 
-    // props
     for (const prop of arena.props) {
       if (!prop.grabbable || !prop.alive) continue;
       const pp = prop.body.translation();
       const d = Math.hypot(pp.x - hand.x, pp.y - hand.y);
       if (d < GOAT.grabReach + prop.radius && (!best || d < best.d)) {
         const surf = add({ x: pp.x, y: pp.y }, scale(norm(sub(hand, { x: pp.x, y: pp.y })), prop.radius));
-        best = { body: prop.body, point: surf, kind: "prop", d };
+        best = { body: prop.body, point: surf, kind: "prop", d, neckHold: false };
       }
     }
 
-    // other goats
     for (const other of arena.goats) {
-      if (other === this || other.dead) continue;
+      if (other === this || other.dead || other.eliminated) continue;
       const d = Math.hypot(other.pos.x - hand.x, other.pos.y - hand.y);
-      if (d < GOAT.grabReach + GOAT.radius && (!best || d < best.d)) {
-        const surf = add(other.pos, scale(norm(sub(hand, other.pos)), GOAT.radius));
-        best = { body: other.body, point: surf, kind: "goat", d };
+      if (d < GOAT.grabReach + BODY_RADIUS && (!best || d < best.d)) {
+        const surf = add(other.pos, scale(norm(sub(hand, other.pos)), BODY_RADIUS * 0.8));
+        // a grip close to the head counts as holding the back of the neck
+        const hw = other.headWorld();
+        const neck = Math.hypot(surf.x - hw.x, surf.y - hw.y) < HEAD_RADIUS + 0.16;
+        best = { body: other.body, point: surf, kind: "goat", d, neckHold: neck };
       }
     }
 
-    if (best) this.makeGrab(arena, best.body, best.point, best.kind);
+    if (best) this.makeGrab(arena, best);
   }
 
-  private makeGrab(arena: Arena, target: RigidBody, worldPoint: Vec2, kind: string) {
+  private makeGrab(
+    arena: Arena,
+    target: { body: RigidBody; point: Vec2; kind: string; neckHold: boolean },
+  ) {
     const a1 = HAND_LOCAL;
-    const tp = target.translation();
-    const ta = target.rotation();
-    const a2 = rotate(sub(worldPoint, { x: tp.x, y: tp.y }), -ta);
+    const tp = target.body.translation();
+    const ta = target.body.rotation();
+    const a2 = rotate(sub(target.point, { x: tp.x, y: tp.y }), -ta);
     const jd = RAPIER.JointData.revolute(
       new RAPIER.Vector2(a1.x, a1.y),
       new RAPIER.Vector2(a2.x, a2.y),
     );
-    this.grabJoint = arena.physics.world.createImpulseJoint(jd, this.body, target, true);
-    this.grabTarget = { body: target, kind };
+    this.grabJoint = arena.physics.world.createImpulseJoint(jd, this.body, target.body, true);
+    this.grabTarget = { body: target.body, kind: target.kind, neckHold: target.neckHold };
+    this.twistAccum = 0;
+    if (target.kind === "goat") {
+      const victim = this.findGoatByBody(arena, target.body);
+      this.lastRelAngle = victim ? angleDelta(this.angle, victim.angle) : 0;
+    }
     arena.sfx.play("grab", { volume: 0.5 });
   }
 
-  /** Called when a grabbed prop/goat is about to be removed from the world. */
   releaseIfGrabbing(body: RigidBody, arena: Arena) {
     if (this.grabTarget && this.grabTarget.body === body) this.releaseGrab(arena);
   }
@@ -307,6 +342,7 @@ export class Goat {
       arena.physics.world.removeImpulseJoint(this.grabJoint, true);
       this.grabJoint = null;
       this.grabTarget = null;
+      this.twistAccum = 0;
       arena.sfx.play("release", { volume: 0.35 });
     }
   }
@@ -315,12 +351,12 @@ export class Goat {
     return arena.goats.find((g) => g.body === b);
   }
 
-  // ---- grounding probes --------------------------------------------------
+  // ---- grounding probes ----------------------------------------------------
   private groundedDown(): boolean {
-    return !!this.rayHit({ x: 0, y: 1 }, GOAT.radius + 0.14);
+    return this.rayHit({ x: 0, y: 1 }, BODY_RADIUS + 0.16);
   }
   private feetGrounded(): boolean {
-    const feet = this.localToWorld(FOOT_LOCAL);
+    const feet = this.localToWorld(FEET_LOCAL);
     const dir = scale(this.headDir(), -1);
     const ray = new RAPIER.Ray(new RAPIER.Vector2(feet.x, feet.y), new RAPIER.Vector2(dir.x, dir.y));
     return !!this.world.castRay(ray, GOAT.kickReach * 0.7, true, undefined, groups(0xffff, CG.TERRAIN | CG.PROP), undefined, this.body);
@@ -330,68 +366,54 @@ export class Goat {
     return !!this.world.castRay(ray, dist, true, undefined, groups(0xffff, CG.TERRAIN | CG.PROP), undefined, this.body);
   }
 
-  // ---- lifecycle ---------------------------------------------------------
-  eliminate(arena: Arena) {
-    if (this.dead) return;
+  // ---- lifecycle -----------------------------------------------------------
+  /** Called by Arena.killGoat once a death is confirmed (lives already deducted). */
+  enterDeadState(arena: Arena) {
     this.alive = false;
-    this.releaseGrab(arena);
-  }
-
-  kill(arena: Arena) {
-    this.eliminate(arena);
     this.dead = true;
+    this.releaseGrab(arena);
+    for (const g of arena.goats) g.releaseIfGrabbing(this.body, arena);
     this.view.visible = false;
-    this.grabGfx.clear();
+    this.kicking = 0;
+    this.kickAmt = 0;
+    this.body.setEnabled(false);
+    this.respawnT = 2.0;
+    if (this.lives <= 0) this.eliminated = true;
   }
 
   respawn(spawn: Vec2, angle: number) {
     this.dead = false;
     this.alive = true;
     this.view.visible = true;
-    this.kicking = 0;
-    this.kickCd = 0;
-    this.kickAmt = 0;
-    this.grabAmt = 0;
-    this.lastHitBy = -1;
+    this.invulnT = 1.6;
+    this.body.setEnabled(true);
     this.body.setTranslation(new RAPIER.Vector2(spawn.x, spawn.y), true);
     this.body.setRotation(angle, true);
     this.body.setLinvel(new RAPIER.Vector2(0, 0), true);
     this.body.setAngvel(0, true);
-    this.body.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
   }
 
-  // ---- render sync -------------------------------------------------------
+  // ---- render sync -----------------------------------------------------------
   sync() {
+    if (this.dead || this.eliminated) return;
+    const frame = this.skin.frame(this.kickAmt);
+    if (this.sprite.texture !== frame.tex) {
+      this.sprite.texture = frame.tex;
+      this.sprite.anchor.set(frame.anchor.x, frame.anchor.y);
+    }
     const p = this.pos;
-    this.sprite.texture = this.skin.frame(this.kickAmt, this.grabAmt);
-    // rotate the whole view so any accessories (scuba tank etc.) tumble too
     this.view.position.set(p.x, p.y);
     this.view.rotation = this.angle;
-    this.sprite.rotation = 0;
-    this.sprite.position.set(0, 0);
-    this.sprite.alpha = this.alive ? 1 : 0.55;
-
-    // grab rope
-    this.grabGfx.clear();
-    if (this.grabJoint && this.grabTarget) {
-      const hand = this.localToWorld(HAND_LOCAL);
-      const tp = this.grabTarget.body.translation();
-      this.grabGfx
-        .moveTo(hand.x, hand.y)
-        .lineTo(tp.x, tp.y)
-        .stroke({ width: 0.05, color: 0xffffff, alpha: 0.35 });
-    }
+    this.sprite.alpha = this.invulnT > 0 ? 0.5 + 0.35 * Math.sin(this.invulnT * 26) : 1;
   }
 
   destroy(arena: Arena) {
     this.releaseGrab(arena);
     arena.physics.world.removeRigidBody(this.body);
     this.view.destroy({ children: true });
-    this.grabGfx.destroy();
   }
 }
 
-// A snapping curve so the leg flicks out fast and recovers.
 function kickCurve(phase: number): number {
   return phase < 0.32 ? phase / 0.32 : Math.max(0, 1 - (phase - 0.32) / 0.68);
 }

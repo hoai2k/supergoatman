@@ -89,11 +89,15 @@ export const PALETTES: Palette[] = [
 ];
 
 // ---- Match rules -------------------------------------------------------
+export const LIVES = 9; // cats wish they were goats
+
 export const MATCH = {
-  pointsToWin: 5,
   roundIntroTime: 2.0,
-  roundOutroTime: 2.6,
-  suddenDeathAfter: 45, // seconds before a board starts closing in
+  outroTime: 3.0,
+  suddenDeathAfter: 99, // seconds before a board starts closing in
 };
 
 export const MAX_PLAYERS = 4;
+
+// Every arena backdrop maps onto this world rectangle (matches 1672x941 art).
+export const ARENA_RECT = { minX: -12, maxX: 12, minY: -6.75, maxY: 6.75 };
