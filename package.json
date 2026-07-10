@@ -1,0 +1,21 @@
+{
+  "name": "super-goat-man",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Super Goat Man — a local-multiplayer physics brawler inspired by Super Bunny Man",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host"
+  },
+  "dependencies": {
+    "@dimforge/rapier2d-compat": "^0.14.0",
+    "pixi.js": "^8.6.6"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.61.1",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.7"
+  }
+}

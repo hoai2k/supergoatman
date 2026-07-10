@@ -1,0 +1,148 @@
+import { Container, Graphics } from "pixi.js";
+import type { Screen } from "./Screen";
+import type { Game } from "../core/Game";
+import { Match } from "../core/Match";
+import { boardById } from "../boards";
+import { HUD } from "./HUD";
+import { mkText, COL } from "./theme";
+import { easeOutBack } from "./theme";
+
+export class MatchScreen implements Screen {
+  container = new Container();
+  private match: Match;
+  private hud = new HUD();
+  private banner = new Container();
+  private bannerText = mkText("", { size: 90, weight: "900", fill: COL.cream, stroke: COL.ink, strokeW: 12 });
+  private bannerT = 0;
+  private bannerDur = 0;
+  private pauseOverlay = new Container();
+  private paused = false;
+  private pendingResults = -2;
+
+  constructor(private game: Game) {
+    const board = boardById(game.session.boardId);
+    const players = game.buildPlayers();
+    this.match = new Match(this.container, board, players, game.input, game.audio);
+    this.match.onMatchOver = (winner) => {
+      this.pendingResults = winner;
+    };
+    this.match.onRoundEvent = (kind, data) => this.onRoundEvent(kind, data);
+    (window as unknown as { __match: Match }).__match = this.match;
+
+    this.banner.addChild(this.bannerText);
+    this.container.addChild(this.hud.root, this.banner);
+    this.hud.build(this.match);
+    this.buildPause();
+    this.container.addChild(this.pauseOverlay);
+    this.pauseOverlay.visible = false;
+  }
+
+  private onRoundEvent(kind: string, data?: unknown) {
+    if (kind === "intro") this.showBanner(`ROUND ${this.match.round}`, COL.accent, 1.6);
+    else if (kind === "go") this.showBanner("GOAT!", COL.good, 0.8);
+    else if (kind === "roundOver") {
+      const w = data as number;
+      if (w >= 0) {
+        const p = this.match.players[w];
+        this.showBanner(`${p.name} SCORES`, p.palette.body, 2.2);
+      } else this.showBanner("DRAW", COL.dim, 2.0);
+    }
+  }
+
+  private showBanner(text: string, color: number, dur: number) {
+    this.bannerText.text = text;
+    this.bannerText.style.fill = color;
+    this.bannerT = 0;
+    this.bannerDur = dur;
+    this.banner.visible = true;
+  }
+
+  enter() {}
+
+  exit() {
+    this.match.destroy();
+  }
+
+  update(dt: number) {
+    // pause toggle
+    if (this.consumeStart()) {
+      this.paused = !this.paused;
+      this.pauseOverlay.visible = this.paused;
+      this.game.audio.play(this.paused ? "release" : "blip");
+    }
+    if (this.paused) {
+      if (this.consumeBack()) {
+        this.game.audio.play("release");
+        this.game.audio.setMusic(false);
+        this.game.toTitle();
+      }
+      return;
+    }
+
+    this.match.update(dt);
+    this.hud.update(this.match);
+    this.tickBanner(dt);
+
+    if (this.pendingResults !== -2) {
+      const w = this.pendingResults;
+      this.pendingResults = -2;
+      this.game.audio.setMusic(false);
+      this.game.toResults(w);
+    }
+  }
+
+  private tickBanner(dt: number) {
+    if (!this.banner.visible) return;
+    this.bannerT += dt;
+    const t = this.bannerT;
+    const inT = Math.min(1, t / 0.3);
+    this.banner.scale.set(easeOutBack(inT));
+    if (t > this.bannerDur) {
+      this.banner.alpha = Math.max(0, 1 - (t - this.bannerDur) / 0.4);
+      if (this.banner.alpha <= 0) {
+        this.banner.visible = false;
+        this.banner.alpha = 1;
+      }
+    } else {
+      this.banner.alpha = 1;
+    }
+    this.banner.position.set(this.game.vw / 2, this.game.vh * 0.32);
+  }
+
+  private consumeStart(): boolean {
+    for (const s of this.activeSources()) if (this.game.input.nav(s).start) return true;
+    return false;
+  }
+  private consumeBack(): boolean {
+    for (const s of this.activeSources()) if (this.game.input.nav(s).back) return true;
+    return false;
+  }
+  private activeSources() {
+    return this.game.session.slots.filter((sl) => sl.active && !sl.isCPU && sl.source).map((sl) => sl.source!);
+  }
+
+  private buildPause() {
+    const dim = new Graphics();
+    dim.rect(0, 0, this.game.vw, this.game.vh).fill({ color: 0x000000, alpha: 0.6 });
+    dim.label = "dim";
+    const t = mkText("PAUSED", { size: 80, weight: "900", fill: COL.cream, stroke: COL.ink, strokeW: 12 });
+    t.position.set(this.game.vw / 2, this.game.vh * 0.42);
+    const h = mkText("Start: resume      Ⓑ / Esc: quit to menu", { size: 26, weight: "800", fill: COL.dim });
+    h.position.set(this.game.vw / 2, this.game.vh * 0.42 + 70);
+    this.pauseOverlay.addChild(dim, t, h);
+  }
+
+  resize(w: number, h: number) {
+    this.match.resize(w, h);
+    this.hud.resize(w, h);
+    this.banner.position.set(w / 2, h * 0.32);
+    this.pauseOverlay.removeChildren();
+    const dim = new Graphics();
+    dim.rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.6 });
+    const t = mkText("PAUSED", { size: 80, weight: "900", fill: COL.cream, stroke: COL.ink, strokeW: 12 });
+    t.position.set(w / 2, h * 0.42);
+    const hint = mkText("Start: resume      Ⓑ / Esc: quit to menu", { size: 26, weight: "800", fill: COL.dim });
+    hint.position.set(w / 2, h * 0.42 + 70);
+    this.pauseOverlay.addChild(dim, t, hint);
+  }
+}
