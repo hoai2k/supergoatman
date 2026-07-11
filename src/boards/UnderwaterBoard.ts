@@ -23,16 +23,15 @@ export class UnderwaterBoard extends Board {
     ]);
     this.addBackdrop("underwater");
 
-    // colliders matched to the painted reef rock (arena-art px coords)
+    // colliders matched to the painted reef rock (arena-art px coords);
+    // pillars run flush to the walls so no goat can wedge into the slot
     this.solidPxRect(arena, 0, 545, 1672, 750); // main sandy ledge
-    this.solidPxRect(arena, 55, 303, 430, 545); // left pillar
-    this.solidPxRect(arena, 1215, 310, 1665, 545); // right pillar
+    this.solidPxRect(arena, 0, 303, 430, 545); // left pillar
+    this.solidPxRect(arena, 1215, 310, 1672, 545); // right pillar
     this.solidPxRect(arena, 700, 348, 980, 470); // floating centre platform
 
     // walls + ceiling (the surface) — glass aquarium rules
-    this.solidRect(arena, this.bounds.minX - 1.2, this.bounds.minY - 2, this.bounds.minX - 0.1, this.bounds.maxY);
-    this.solidRect(arena, this.bounds.maxX + 0.1, this.bounds.minY - 2, this.bounds.maxX + 1.2, this.bounds.maxY);
-    this.solidRect(arena, this.bounds.minX, this.bounds.minY - 1.4, this.bounds.maxX, this.bounds.minY - 0.3);
+    this.addArenaShell(arena);
 
     // urchin colonies on the pillar tops against each wall...
     this.addHazard("urchins", this.bounds.minX + 1.1, -2.38, 1.6, {

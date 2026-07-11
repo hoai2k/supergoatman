@@ -42,9 +42,7 @@ export class BridgeBoard extends Board {
     this.solidPxRect(arena, 1362, 432, 1672, 941); // right cliff
 
     // walls + ceiling
-    this.solidRect(arena, this.bounds.minX - 1.2, this.bounds.minY - 2, this.bounds.minX - 0.1, this.bounds.maxY);
-    this.solidRect(arena, this.bounds.maxX + 0.1, this.bounds.minY - 2, this.bounds.maxX + 1.2, this.bounds.maxY);
-    this.solidRect(arena, this.bounds.minX, this.bounds.minY - 1.4, this.bounds.maxX, this.bounds.minY - 0.3);
+    this.addArenaShell(arena);
 
     this.buildBridge(arena);
 

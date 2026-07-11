@@ -34,9 +34,7 @@ export class VolcanoBoard extends Board {
     this.solidPxRect(arena, 1080, 573, 1198, 647); // floating stone R
 
     // walls + ceiling so nobody leaves the painting
-    this.solidRect(arena, this.bounds.minX - 1.2, this.bounds.minY - 2, this.bounds.minX - 0.1, this.bounds.maxY);
-    this.solidRect(arena, this.bounds.maxX + 0.1, this.bounds.minY - 2, this.bounds.maxX + 1.2, this.bounds.maxY);
-    this.solidRect(arena, this.bounds.minX, this.bounds.minY - 1.4, this.bounds.maxX, this.bounds.minY - 0.3);
+    this.addArenaShell(arena);
 
     // molten obsidian shards guard the far edges
     this.addHazard("lavaShards", this.bounds.minX + 1.15, 0.86, 2.0, {

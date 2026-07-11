@@ -3,6 +3,7 @@ import type { Screen } from "./Screen";
 import type { Game } from "../core/Game";
 import { Match } from "../core/Match";
 import { boardById } from "../boards";
+import { DebugDraw } from "../render/DebugDraw";
 import { HUD } from "./HUD";
 import { mkText, COL } from "./theme";
 import { easeOutBack } from "./theme";
@@ -18,6 +19,7 @@ export class MatchScreen implements Screen {
   private pauseOverlay = new Container();
   private paused = false;
   private pendingResults = -2;
+  private debugDraw: DebugDraw | null = null;
 
   constructor(private game: Game) {
     const board = boardById(game.session.boardId);
@@ -29,17 +31,10 @@ export class MatchScreen implements Screen {
     this.match.onRoundEvent = (kind, data) => this.onRoundEvent(kind, data);
     (window as unknown as { __match: Match }).__match = this.match;
 
-    // debug: draw collider + kill rects over the painted arena (#dbgcol)
-    if (location.hash.includes("dbgcol")) {
-      const dbg = new Graphics();
-      for (const r of this.match.board.debugRects) {
-        dbg
-          .rect(r.x, r.y, r.w, r.h)
-          .stroke({ width: 0.04, color: r.lethal ? 0xff3355 : 0x33ff88, alpha: 0.9 });
-        if (r.lethal) dbg.rect(r.x, r.y, r.w, r.h).fill({ color: 0xff3355, alpha: 0.15 });
-      }
-      this.match.world.addChild(dbg);
-    }
+    // debug overlay: live collision shapes for EVERYTHING (?debug=bb or #dbgcol)
+    const wantDebug =
+      new URLSearchParams(location.search).get("debug") === "bb" || location.hash.includes("dbgcol");
+    if (wantDebug) this.debugDraw = new DebugDraw(this.match);
 
     this.banner.addChild(this.bannerText);
     this.container.addChild(this.hud.root, this.banner);
@@ -92,6 +87,7 @@ export class MatchScreen implements Screen {
     }
 
     this.match.update(dt);
+    this.debugDraw?.update();
     this.hud.update(this.match);
     this.tickBanner(dt);
 

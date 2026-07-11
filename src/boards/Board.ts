@@ -51,7 +51,7 @@ export abstract class Board {
   gravityScale = 1;
 
   protected solids: Solid[] = [];
-  protected hazardZones: HazardZone[] = [];
+  hazardZones: HazardZone[] = [];
   /** Debug: collider rects drawn when #dbgcol is in the URL. */
   debugRects: { x: number; y: number; w: number; h: number; lethal: boolean }[] = [];
 
@@ -183,11 +183,18 @@ export abstract class Board {
     }
   }
 
-  /** Standard invisible walls + ceiling so nobody leaves the painting. */
+  /**
+   * Standard invisible walls + ceiling so nobody leaves the painting.
+   * Wall faces overlap the arena bound by 0.05 (not recessed outside it):
+   * terrain slabs end exactly at the bound, and any crack between a slab
+   * end and a wall face is a goat trap — the opposing contact normals
+   * deadlock the solver and the goat hangs wedged at the edge of the
+   * screen. Overlapping static boxes cost nothing.
+   */
   protected addArenaShell(arena: Arena) {
-    this.solidRect(arena, this.bounds.minX - 1.2, this.bounds.minY - 2, this.bounds.minX - 0.1, this.bounds.maxY);
-    this.solidRect(arena, this.bounds.maxX + 0.1, this.bounds.minY - 2, this.bounds.maxX + 1.2, this.bounds.maxY);
-    this.solidRect(arena, this.bounds.minX, this.bounds.minY - 1.4, this.bounds.maxX, this.bounds.minY - 0.3);
+    this.solidRect(arena, this.bounds.minX - 1.2, this.bounds.minY - 2, this.bounds.minX + 0.05, this.bounds.maxY);
+    this.solidRect(arena, this.bounds.maxX - 0.05, this.bounds.minY - 2, this.bounds.maxX + 1.2, this.bounds.maxY);
+    this.solidRect(arena, this.bounds.minX - 1.2, this.bounds.minY - 1.4, this.bounds.maxX + 1.2, this.bounds.minY - 0.3);
   }
 
   solidBox(

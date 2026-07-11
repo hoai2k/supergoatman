@@ -51,7 +51,7 @@ export class Ragdoll {
         .setTranslation(px, py)
         .setRotation(angle)
         .setLinearDamping(0.3)
-        .setAngularDamping(0.9)
+        .setAngularDamping(1.7)
         .setCcdEnabled(true);
       const body = world.createRigidBody(desc);
       const col = RAPIER.ColliderDesc.ball(part.def.radius)
@@ -61,16 +61,17 @@ export class Ragdoll {
         .setCollisionGroups(groups(CG.PROP, CG.TERRAIN | CG.GOAT | CG.PROP));
       world.createCollider(col, body);
 
-      // velocity of this part = body linvel + spin contribution + scatter
+      // velocity of this part = body linvel + spin contribution + a whisper of
+      // scatter — the body should flop as one piece, not detonate
       const spin = { x: -off.y * angvel, y: off.x * angvel };
       body.setLinvel(
         new RAPIER.Vector2(
-          linvel.x + spin.x + (Math.random() - 0.5) * 1.6 + (impulse?.x ?? 0),
-          linvel.y + spin.y + (Math.random() - 0.5) * 1.6 + (impulse?.y ?? 0),
+          linvel.x + spin.x + (Math.random() - 0.5) * 0.5 + (impulse?.x ?? 0),
+          linvel.y + spin.y + (Math.random() - 0.5) * 0.5 + (impulse?.y ?? 0),
         ),
         true,
       );
-      body.setAngvel(angvel + (Math.random() - 0.5) * 10, true);
+      body.setAngvel(angvel + (Math.random() - 0.5) * 2.5, true);
 
       const sprite = new Sprite(part.tex);
       sprite.anchor.set(0.5);
@@ -82,7 +83,13 @@ export class Ragdoll {
       byName.set(part.def.name, piece);
     }
 
-    // loose revolute joints so limbs flail but stay attached
+    // revolute joints WITH LIMITS: limbs swing through plausible arcs around
+    // their sockets instead of spinning freely — a ragdoll, not a dismembering
+    const LIMITS: Record<string, [number, number]> = {
+      head: [-0.55, 0.55], // neck flops about half a radian either way
+      backLeg: [-0.9, 0.9], // hips get a wider arc
+      frontLeg: [-0.9, 0.9],
+    };
     for (const [aName, bName, jx, jy] of RAGDOLL_JOINTS) {
       const a = byName.get(aName);
       const b = byName.get(bName);
@@ -100,7 +107,9 @@ export class Ragdoll {
         new RAPIER.Vector2(a1.x, a1.y),
         new RAPIER.Vector2(a2.x, a2.y),
       );
-      world.createImpulseJoint(jd, a.body, b.body, true);
+      const joint = world.createImpulseJoint(jd, a.body, b.body, true) as RAPIER.RevoluteImpulseJoint;
+      const lim = LIMITS[bName] ?? [-0.8, 0.8];
+      joint.setLimits(lim[0], lim[1]);
     }
   }
 

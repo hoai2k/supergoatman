@@ -34,8 +34,8 @@ export const GOAT = {
   // actually touch them, not from a body-length away.
   kickReach: 0.36, // leg sweep length beyond the feet point
   kickWidth: 0.14, // leg thickness
-  kickKnockback: 1.7, // impulse imparted to victims — a shove, not a cannon
-  kickUpBias: 0.24, // victims get lofted a bit (juicier)
+  kickKnockback: 2.5, // impulse imparted to victims (original strength)
+  kickUpBias: 0.3, // victims get lofted a bit (juicier)
   kickActiveTime: 0.16, // seconds the leg is "out" and can hit
   kickCooldown: 0.3, // seconds between kicks
   kickPopPower: 1.0,
