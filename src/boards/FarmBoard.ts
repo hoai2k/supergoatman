@@ -33,15 +33,20 @@ export class FarmBoard extends Board {
     // floating plank
     this.solidPxRect(arena, 688, 358, 977, 394, { oneWay: true });
     // benches (tops only)
-    this.solidPxRect(arena, 315, 588, 548, 619, { oneWay: true });
+    this.solidPxRect(arena, 321, 588, 548, 619, { oneWay: true });
     this.solidPxRect(arena, 1114, 583, 1345, 617, { oneWay: true });
     // rusty machinery blocks the edges
     this.solidPxRect(arena, -14, 587, 201, 1008);
-    this.solidPxRect(arena, 1356, 619, 1653, 1000);
+    this.solidPxRect(arena, 1440, 619, 1653, 1000);
 
-    // ...and shreds whatever touches it
-    this.addKillZonePx(30, 500, 300, 800, { labels: ["THRESHED", "BALED", "TETANUS"], fx: "star", sfx: "thud" });
-    this.addKillZonePx(1360, 540, 1650, 800, { labels: ["THRESHED", "BALED", "TETANUS"], fx: "star", sfx: "thud" });
+    // ...and shreds whatever touches it (hazards surveyed 2026-07-11)
+    this.addKillZonePx(30, 633, 317, 800, { labels: ["THRESHED", "BALED", "TETANUS"], fx: "star", sfx: "thud" });
+    this.addKillZonePx(1337, 680, 1650, 800, { labels: ["THRESHED", "BALED", "TETANUS"], fx: "star", sfx: "thud" });
+    // spike rows crowning the machinery
+    this.addKillZonePx(1409, 573, 1681, 636);
+    this.addKillZonePx(1476, 529, 1699, 578);
+    this.addKillZonePx(-2, 531, 175, 579);
+    this.addKillZonePx(147, 573, 256, 643);
 
     this.spawns = [
       { pos: { x: -6.2, y: 2.2 }, angle: 0 },

@@ -36,7 +36,7 @@ export class GeometryBoard extends Board {
     this.solidPxRect(arena, 382, 518, 541, 560, { oneWay: true });
     this.solidPxRect(arena, 251, 478, 422, 502, { oneWay: true });
     this.solidPxRect(arena, 1176, 520, 1334, 554, { oneWay: true }); // right steps
-    this.solidPxRect(arena, 1294, 591, 1505, 635, { oneWay: true });
+    this.solidPxRect(arena, 1294, 591, 1505, 629, { oneWay: true });
     this.solidPxRect(arena, 0, 671, 265, 714, { oneWay: true }); // low outer benches
     this.solidPxRect(arena, 1413, 671, 1685, 715, { oneWay: true });
     // grid floor at the bottom so the void doesn't eat everyone instantly
@@ -44,9 +44,12 @@ export class GeometryBoard extends Board {
     // little right-side hop pad
     this.solidPxRect(arena, 1345, 473, 1441, 501, { oneWay: true });
 
-    // the giant painted gear-saws
-    this.addKillZonePx(0, 60, 250, 620, { labels: ["GEARED", "SAWN", "TESSELLATED"], fx: "star", sfx: "pop" });
-    this.addKillZonePx(1420, 60, 1672, 620, { labels: ["GEARED", "SAWN", "TESSELLATED"], fx: "star", sfx: "pop" });
+    // the giant painted gear-saws (hazards surveyed 2026-07-11)
+    this.addKillZonePx(0, 60, 121, 589, { labels: ["GEARED", "SAWN", "TESSELLATED"], fx: "star", sfx: "pop" });
+    this.addKillZonePx(1544, 60, 1672, 592, { labels: ["GEARED", "SAWN", "TESSELLATED"], fx: "star", sfx: "pop" });
+    // spike columns flanking the gear pits
+    this.addKillZonePx(1448, 222, 1552, 487);
+    this.addKillZonePx(113, 203, 217, 485);
 
     this.spawns = [
       { pos: { x: -4.5, y: 1.6 }, angle: 0 },

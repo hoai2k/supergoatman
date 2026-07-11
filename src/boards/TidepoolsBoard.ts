@@ -39,9 +39,16 @@ export class TidepoolsBoard extends Board {
     // pool floor — the tide pools are shallow; you wade, you don't drown
     this.solidPxRect(arena, 8, 814, 1680, 1011);
 
-    // urchin-crusted cliff faces (painted) are lethal to the touch
-    this.addKillZonePx(200, 130, 300, 620, { labels: ["URCHIN'D", "WALL OF NOPE", "ACUPUNCTURE"], fx: "bubble", sfx: "splash" });
-    this.addKillZonePx(1380, 150, 1470, 620, { labels: ["URCHIN'D", "WALL OF NOPE", "ACUPUNCTURE"], fx: "bubble", sfx: "splash" });
+    // urchin-crusted rocks are lethal to the touch (surveyed 2026-07-11)
+    this.addKillZonePx(166, 397, 251, 501, { labels: ["URCHIN'D", "WALL OF NOPE", "ACUPUNCTURE"], fx: "bubble", sfx: "splash" });
+    this.addKillZonePx(1439, 396, 1513, 502, { labels: ["URCHIN'D", "WALL OF NOPE", "ACUPUNCTURE"], fx: "bubble", sfx: "splash" });
+    // spiky outcrops dotted up the cliff columns
+    this.addKillZonePx(77, 121, 155, 246);
+    this.addKillZonePx(121, 255, 186, 365);
+    this.addKillZonePx(1496, 258, 1568, 369);
+    this.addKillZonePx(1525, 150, 1598, 261);
+    this.addKillZonePx(1583, 416, 1653, 506);
+    this.addKillZonePx(17, 370, 90, 458);
 
     this.spawns = [
       { pos: { x: -5.5, y: 1.4 }, angle: 0 },

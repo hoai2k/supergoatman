@@ -40,10 +40,14 @@ export class TundraBoard extends Board {
     this.solidPxRect(arena, 130, 147, 237, 285);
     this.solidPxRect(arena, 1428, 164, 1562, 272);
 
-    // painted ice-spike beds at the rink edges (deep enough to catch anyone
-    // who slips into the gap between rink and glacier)
-    this.addKillZonePx(30, 590, 250, 941, { labels: ["ICICLE'D", "FLASH FROZEN", "SLUSHIED"], fx: "star", sfx: "pop" });
-    this.addKillZonePx(1430, 590, 1650, 941, { labels: ["ICICLE'D", "FLASH FROZEN", "SLUSHIED"], fx: "star", sfx: "pop" });
+    // painted ice-spike beds at the rink edges (hazards surveyed 2026-07-11)
+    this.addKillZonePx(65, 613, 201, 778, { labels: ["ICICLE'D", "FLASH FROZEN", "SLUSHIED"], fx: "star", sfx: "pop" });
+    this.addKillZonePx(1481, 608, 1641, 778, { labels: ["ICICLE'D", "FLASH FROZEN", "SLUSHIED"], fx: "star", sfx: "pop" });
+    // icicle spears guarding the glacier faces and high perches
+    this.addKillZonePx(1467, 278, 1552, 441);
+    this.addKillZonePx(125, 293, 204, 480);
+    this.addKillZonePx(1428, 279, 1466, 357);
+    this.addKillZonePx(219, 210, 256, 364);
 
     this.spawns = [
       { pos: { x: -6.5, y: 2.2 }, angle: 0 },
