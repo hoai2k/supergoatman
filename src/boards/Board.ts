@@ -36,7 +36,23 @@ export interface EditRect {
   x1: number;
   y1: number;
   oneWay: boolean;
+  visible: boolean; // rendered in-scene as a board-themed block
+  gfx: Graphics | null; // the rendering, when visible
   shell: boolean; // arena walls/ceiling — not part of the board's platforms
+}
+
+/** Paint a box in the board's terrain colours — the "visible" platform look. */
+export function drawThemedBox(g: Graphics, x0: number, y0: number, x1: number, y1: number, theme: TerrainTheme) {
+  g.clear();
+  const w = x1 - x0;
+  const h = y1 - y0;
+  const band = Math.min(0.18, h * 0.38);
+  const shade = Math.min(0.12, h * 0.22);
+  g.rect(x0, y0, w, h).fill({ color: theme.face });
+  g.rect(x0, y1 - shade, w, shade).fill({ color: theme.faceDark });
+  g.rect(x0, y0, w, band).fill({ color: theme.top });
+  g.rect(x0, y0, w, Math.min(0.05, band * 0.4)).fill({ color: theme.topLight });
+  g.rect(x0, y0, w, h).stroke({ width: 0.035, color: theme.faceDark, alpha: 0.85 });
 }
 
 export interface HazardZone {
@@ -117,9 +133,11 @@ export abstract class Board {
 
   // ---- terrain helpers ---------------------------------------------------
   /**
-   * Invisible static collider matched to painted scenery.
+   * Static collider matched to painted scenery (invisible by default).
    * `oneWay`: brawler-style platform — solid from above, jump-through from
    * below. Only meaningful for slabs that HOVER over standable ground.
+   * `visible`: also render the box as a block in the board's terrain colours
+   * (for platforms that aren't part of the painted backdrop).
    */
   solidRect(
     arena: Arena,
@@ -127,7 +145,14 @@ export abstract class Board {
     y0: number,
     x1: number,
     y1: number,
-    opts: { friction?: number; restitution?: number; icy?: boolean; bouncy?: boolean; oneWay?: boolean } = {},
+    opts: {
+      friction?: number;
+      restitution?: number;
+      icy?: boolean;
+      bouncy?: boolean;
+      oneWay?: boolean;
+      visible?: boolean;
+    } = {},
   ): Solid {
     const cx = (x0 + x1) / 2;
     const cy = (y0 + y1) / 2;
@@ -141,7 +166,13 @@ export abstract class Board {
     if (opts.bouncy) col.setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Max);
     const collider = arena.physics.world.createCollider(col, body);
     if (opts.oneWay) arena.physics.addOneWay(collider);
-    const solid = { body, gfx: null };
+    let gfx: Graphics | null = null;
+    if (opts.visible) {
+      gfx = new Graphics();
+      drawThemedBox(gfx, x0, y0, x1, y1, this.theme);
+      this.root.addChild(gfx);
+    }
+    const solid = { body, gfx };
     this.solids.push(solid);
     this.debugRects.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0, lethal: false });
     this.editRects.push({
@@ -152,6 +183,8 @@ export abstract class Board {
       x1,
       y1,
       oneWay: !!opts.oneWay,
+      visible: !!opts.visible,
+      gfx,
       shell: this.buildingShell,
     });
     return solid;
@@ -167,14 +200,21 @@ export abstract class Board {
     };
   }
 
-  /** Invisible static collider from arena-art pixel coords. */
+  /** Static collider from arena-art pixel coords. */
   solidPxRect(
     arena: Arena,
     px0: number,
     py0: number,
     px1: number,
     py1: number,
-    opts: { friction?: number; restitution?: number; icy?: boolean; bouncy?: boolean; oneWay?: boolean } = {},
+    opts: {
+      friction?: number;
+      restitution?: number;
+      icy?: boolean;
+      bouncy?: boolean;
+      oneWay?: boolean;
+      visible?: boolean;
+    } = {},
   ): Solid {
     const a = this.px(px0, py0);
     const b = this.px(px1, py1);

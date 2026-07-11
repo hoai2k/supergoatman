@@ -35,7 +35,17 @@ async function boot() {
   // debug shortcut: #quick / #allai / #board=volcano jumps straight into a CPU brawl
   const h = location.hash;
   const boardMatch = h.match(/board=(\w+)/);
-  if (h.includes("quick") || h.includes("allai") || boardMatch) {
+  // ?edit=bb — platform surveying: silent, goat-free, straight to the boards
+  if (new URLSearchParams(location.search).get("edit") === "bb") {
+    game.editMode = true;
+    game.audio.enabled = false;
+    if (boardMatch) {
+      game.session.boardId = boardMatch[1];
+      game.toMatch();
+    } else {
+      game.toBoardSelect();
+    }
+  } else if (h.includes("quick") || h.includes("allai") || boardMatch) {
     if (boardMatch) game.session.boardId = boardMatch[1];
     game.session.difficulty = 2;
     game.session.slots.forEach((s, i) => {

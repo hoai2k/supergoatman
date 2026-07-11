@@ -44,6 +44,12 @@ export class Physics {
     this.oneWayTop.set(collider.handle, collider.translation().y - cub.halfExtents.y);
   }
 
+  /** Forget a one-way deck (its collider is being removed). */
+  dropOneWay(handle: number) {
+    this.oneWay.delete(handle);
+    this.oneWayTop.delete(handle);
+  }
+
   /**
    * Is this point within `pad` of any one-way deck's box? While passing
    * through a deck a goat has phantom footing: a kick launches at full

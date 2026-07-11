@@ -149,6 +149,7 @@ export class AudioBus implements Sfx {
 
   // ---- lightweight generative background music (jaunty, loops) -----------
   setMusic(on: boolean) {
+    if (!this.enabled) on = false;
     if (this.musicGain && this.ctx) {
       this.musicGain.gain.linearRampToValueAtTime(on ? 0.16 : 0.0, this.now() + 0.6);
     }

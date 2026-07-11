@@ -51,7 +51,8 @@ export class MatchScreen implements Screen {
   }
 
   private onRoundEvent(kind: string, data?: unknown) {
-    if (kind === "intro") this.showBanner("9 LIVES. NO REFUNDS.", COL.accent, 1.7);
+    if (kind === "intro")
+      this.showBanner(this.game.editMode ? "SURVEYOR MODE" : "9 LIVES. NO REFUNDS.", COL.accent, 1.7);
     else if (kind === "go") this.showBanner("GOAT!", COL.good, 0.8);
     else if (kind === "kill") {
       const d = data as { victim: number; cause: string };

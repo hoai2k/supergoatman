@@ -64,7 +64,9 @@ export class BoardSelectScreen implements Screen {
 
   private mergedNav() {
     const s = this.game;
-    const srcs = s.session.slots.filter((sl) => sl.active && !sl.isCPU && sl.source).map((sl) => sl.source!);
+    let srcs = s.session.slots.filter((sl) => sl.active && !sl.isCPU && sl.source).map((sl) => sl.source!);
+    // edit mode arrives with no claimed slots — let any input browse boards
+    if (srcs.length === 0) srcs = s.availableSources();
     const acc = { confirm: false, back: false, left: false, right: false, up: false, down: false, start: false };
     for (const src of srcs) {
       const n = s.input.nav(src);
@@ -90,7 +92,7 @@ export class BoardSelectScreen implements Screen {
       this.refreshDiff();
       this.game.audio.play("blip");
     }
-    if (nav.back) {
+    if (nav.back && !this.game.editMode) {
       this.game.audio.play("release");
       this.game.toLobby();
       return;

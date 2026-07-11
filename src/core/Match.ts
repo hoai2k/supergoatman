@@ -217,6 +217,11 @@ export class Match {
     }
     this.board.decorateCameraPoints?.(pts);
     if (pts.length) this.camera.frame(pts);
+    else {
+      // nobody to follow (edit mode) — show the whole board, statically
+      const b = this.board.bounds;
+      this.camera.frame([{ x: b.minX, y: b.minY }, { x: b.maxX, y: b.maxY }], 0);
+    }
     this.camera.update(dt);
     this.camera.apply(this.world);
     this.bg.update(this.camera);
@@ -239,7 +244,8 @@ export class Match {
       this.playTime += dt;
       this.board.checkHazards(this.arena);
       this.respawnDueGoats(dt);
-      if (this.playTime > MATCH.suddenDeathAfter) this.board.escalate?.(dt, this.arena);
+      if (this.playTime > MATCH.suddenDeathAfter && this.goats.length > 0)
+        this.board.escalate?.(dt, this.arena);
 
       const left = this.contenders();
       if (left.length <= 1 && this.goats.length > 1) {

@@ -35,6 +35,8 @@ export class Game {
   root = new Container();
   vw = 1280;
   vh = 720;
+  /** ?edit=bb — platform surveying: no goats, no sound, whole-board camera. */
+  editMode = false;
 
   // screen factories are injected to avoid import cycles
   makeTitle!: (g: Game) => Screen;
@@ -79,6 +81,7 @@ export class Game {
 
   /** Convert lobby slots into player configs for a match. */
   buildPlayers(): PlayerConfig[] {
+    if (this.editMode) return []; // surveyors work alone
     const out: PlayerConfig[] = [];
     let idx = 0;
     for (const slot of this.session.slots) {
