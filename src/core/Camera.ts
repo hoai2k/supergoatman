@@ -20,6 +20,8 @@ export class Camera {
   bounds: CamBounds | null = null;
   /** If set, zoom never goes low enough to show outside this rect. */
   viewRect: CamBounds | null = null;
+  /** When true the editor drives the view — frame() becomes a no-op. */
+  manual = false;
   private trauma = 0;
   private shakeT = 0;
 
@@ -35,7 +37,16 @@ export class Camera {
     this.trauma = clamp(this.trauma + amount / 100, 0, 1);
   }
 
+  /** Jump the view somewhere immediately (no damping) — editor pan/zoom. */
+  setView(cx: number, cy: number, zoom: number) {
+    this.center = { x: cx, y: cy };
+    this.targetCenter = { x: cx, y: cy };
+    this.zoom = zoom;
+    this.targetZoom = zoom;
+  }
+
   frame(points: Vec2[], padding = 1.7) {
+    if (this.manual) return;
     if (points.length === 0) return;
     let minX = Infinity,
       minY = Infinity,

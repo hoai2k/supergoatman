@@ -40,13 +40,16 @@ export class BoxEditor {
     startWy: number;
     orig: { x0: number; y0: number; x1: number; y1: number };
   } | null = null;
+  private pan: { lastX: number; lastY: number } | null = null;
   private exportBtn: HTMLButtonElement;
   private addBtn: HTMLButtonElement;
+  private fitBtn: HTMLButtonElement;
   private typeSel: HTMLSelectElement;
   private onDown: (e: PointerEvent) => void;
   private onMove: (e: PointerEvent) => void;
   private onUp: () => void;
   private onKey: (e: KeyboardEvent) => void;
+  private onWheel: (e: WheelEvent) => void;
 
   constructor(
     private match: Match,
@@ -77,22 +80,34 @@ export class BoxEditor {
       o.textContent = label;
       this.typeSel.appendChild(o);
     }
-    Object.assign(this.typeSel.style, BTN_STYLE, { right: "292px", cursor: "pointer" });
+    Object.assign(this.typeSel.style, BTN_STYLE, { right: "348px", cursor: "pointer" });
 
     this.addBtn = document.createElement("button");
     this.addBtn.textContent = "+";
     this.addBtn.title = "Add a box of the chosen type at the board centre";
-    Object.assign(this.addBtn.style, BTN_STYLE, { right: "236px", width: "44px", fontSize: "20px" });
+    Object.assign(this.addBtn.style, BTN_STYLE, { right: "292px", width: "44px", fontSize: "20px" });
     this.addBtn.addEventListener("click", () => {
       this.addBox(this.typeSel.value);
       this.addBtn.blur();
     });
 
-    document.body.append(this.typeSel, this.addBtn, this.exportBtn);
+    this.fitBtn = document.createElement("button");
+    this.fitBtn.textContent = "⤢";
+    this.fitBtn.title = "Fit the whole board (Home / 0)";
+    Object.assign(this.fitBtn.style, BTN_STYLE, { right: "236px", width: "44px", fontSize: "18px" });
+    this.fitBtn.addEventListener("click", () => {
+      this.match.camera.manual = false;
+      this.fitBtn.blur();
+    });
+
+    document.body.append(this.typeSel, this.addBtn, this.fitBtn, this.exportBtn);
 
     this.onDown = (e) => this.pointerDown(e);
     this.onMove = (e) => this.pointerMove(e);
-    this.onUp = () => (this.drag = null);
+    this.onUp = () => {
+      this.drag = null;
+      this.pan = null;
+    };
     this.onKey = (e) => {
       if (e.key === "Delete" || e.key === "Backspace") {
         if (this.selected) {
@@ -101,12 +116,36 @@ export class BoxEditor {
         }
       } else if (e.key === "Escape") {
         this.selected = null;
+      } else if (e.key === "Home" || e.key === "0") {
+        this.match.camera.manual = false; // back to the full-board view
       }
     };
+    this.onWheel = (e) => this.wheel(e);
     window.addEventListener("pointerdown", this.onDown);
     window.addEventListener("pointermove", this.onMove);
     window.addEventListener("pointerup", this.onUp);
     window.addEventListener("keydown", this.onKey);
+    window.addEventListener("wheel", this.onWheel, { passive: false });
+  }
+
+  /** Wheel / trackpad pinch: zoom about the cursor. */
+  private wheel(e: WheelEvent) {
+    const tag = (e.target as HTMLElement)?.tagName;
+    if (tag === "SELECT" || tag === "BUTTON") return;
+    e.preventDefault();
+    const cam = this.match.camera;
+    const ppu = cam.pixelZoom / cam.zoom;
+    const b = this.match.board.bounds;
+    const fit = Math.min(cam.vw / ((b.maxX - b.minX) * ppu), cam.vh / ((b.maxY - b.minY) * ppu));
+    const factor = Math.min(1.3, Math.max(0.75, Math.exp(-e.deltaY * 0.0014)));
+    const z = Math.min(8, Math.max(fit * 0.55, cam.zoom * factor));
+    const pzOld = cam.pixelZoom;
+    const pzNew = ppu * z;
+    // keep the world point under the cursor pinned while the scale changes
+    const wx = (e.clientX - cam.vw / 2) / pzOld + cam.center.x;
+    const wy = (e.clientY - cam.vh / 2) / pzOld + cam.center.y;
+    cam.manual = true;
+    cam.setView(wx - (e.clientX - cam.vw / 2) / pzNew, wy - (e.clientY - cam.vh / 2) / pzNew, z);
   }
 
   // ---- coordinate plumbing -------------------------------------------------
@@ -151,7 +190,12 @@ export class BoxEditor {
     const w = this.toWorld(e);
     const hit = this.hitTest(w.x, w.y);
     this.selected = hit?.rect ?? null;
-    if (!hit) return;
+    if (!hit) {
+      // empty space: grab the board itself and drag the view around
+      this.pan = { lastX: e.clientX, lastY: e.clientY };
+      document.body.style.cursor = "grabbing";
+      return;
+    }
     e.preventDefault();
     this.drag = {
       rect: hit.rect,
@@ -163,12 +207,24 @@ export class BoxEditor {
   }
 
   private pointerMove(e: PointerEvent) {
+    if (this.pan) {
+      const cam = this.match.camera;
+      cam.manual = true;
+      cam.setView(
+        cam.center.x - (e.clientX - this.pan.lastX) / cam.pixelZoom,
+        cam.center.y - (e.clientY - this.pan.lastY) / cam.pixelZoom,
+        cam.zoom,
+      );
+      this.pan.lastX = e.clientX;
+      this.pan.lastY = e.clientY;
+      return;
+    }
     const w = this.toWorld(e);
     if (!this.drag) {
       this.hover = this.hitTest(w.x, w.y);
       const m = this.hover?.mode;
       document.body.style.cursor = !m
-        ? ""
+        ? "grab"
         : m.move
           ? "move"
           : (m.l || m.r) && (m.t || m.b)
@@ -294,9 +350,12 @@ export class BoxEditor {
     window.removeEventListener("pointermove", this.onMove);
     window.removeEventListener("pointerup", this.onUp);
     window.removeEventListener("keydown", this.onKey);
+    window.removeEventListener("wheel", this.onWheel);
     document.body.style.cursor = "";
+    this.match.camera.manual = false;
     this.exportBtn.remove();
     this.addBtn.remove();
+    this.fitBtn.remove();
     this.typeSel.remove();
     this.gfx.destroy();
   }

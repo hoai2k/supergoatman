@@ -57,10 +57,46 @@ export class BoardSelectScreen implements Screen {
     this.container.addChild(this.bg, this.header, this.tiles, this.info, this.footer);
   }
 
+  private wheelAcc = 0;
+  private onWheel = (e: WheelEvent) => {
+    e.preventDefault();
+    // horizontal trackpad swipes and vertical wheel both browse the shelf
+    this.wheelAcc += Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    while (Math.abs(this.wheelAcc) >= 90) {
+      const step = Math.sign(this.wheelAcc);
+      this.wheelAcc -= step * 90;
+      const next = clamp(this.idx + step, 0, this.meta.length - 1);
+      if (next !== this.idx) {
+        this.idx = next;
+        this.game.audio.play("click");
+      }
+    }
+  };
+
   enter() {
     this.game.audio.play("blip");
+    window.addEventListener("wheel", this.onWheel, { passive: false });
   }
-  exit() {}
+  exit() {
+    window.removeEventListener("wheel", this.onWheel);
+  }
+
+  /** Confirm the focused arena — shared by keyboard/pad confirm and clicks. */
+  private startMatch() {
+    this.game.session.boardId = this.meta[this.idx].id;
+    this.game.audio.play("go");
+    this.game.toMatch();
+  }
+
+  /** Click a tile: centre it; click the centred tile again to fight there. */
+  private clickTile(i: number) {
+    if (i === this.idx) {
+      this.startMatch();
+    } else {
+      this.idx = i;
+      this.game.audio.play("click");
+    }
+  }
 
   private mergedNav() {
     const s = this.game;
@@ -98,9 +134,7 @@ export class BoardSelectScreen implements Screen {
       return;
     }
     if (nav.confirm || nav.start) {
-      this.game.session.boardId = this.meta[this.idx].id;
-      this.game.audio.play("go");
-      this.game.toMatch();
+      this.startMatch();
       return;
     }
     this.layoutTiles(dt);
@@ -175,6 +209,10 @@ export class BoardSelectScreen implements Screen {
       label.position.set(0, tileW / 2 - 22);
       tile.addChild(p, thumb, label);
       tile.position.set((i - this.idx) * this.tileSpacing, 0);
+      tile.eventMode = "static";
+      tile.cursor = "pointer";
+      const tileIdx = i;
+      tile.on("pointertap", () => this.clickTile(tileIdx));
       this.tiles.addChild(tile);
       this.tileList.push(tile);
     }

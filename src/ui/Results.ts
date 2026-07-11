@@ -30,6 +30,7 @@ export class ResultsScreen implements Screen {
   private sel = 0;
   private t = 0;
   private rng = makeRng(7);
+  private clickedConfirm = false;
 
   constructor(private game: Game, private winner: number) {
     this.container.addChild(this.bg, this.confGfx, this.content, this.buttons);
@@ -84,7 +85,8 @@ export class ResultsScreen implements Screen {
       this.sel = (this.sel + 1) % OPTIONS.length;
       this.game.audio.play("click");
     }
-    if (nav.confirm || nav.start) {
+    if (nav.confirm || nav.start || this.clickedConfirm) {
+      this.clickedConfirm = false;
       this.game.audio.play("go");
       if (this.sel === 0) this.game.toMatch();
       else if (this.sel === 1) this.game.toBoardSelect();
@@ -154,6 +156,13 @@ export class ResultsScreen implements Screen {
       const t = mkText(OPTIONS[i], { size: 26, weight: "900", fill: COL.cream });
       b.addChild(p, t);
       b.position.set(-total / 2 + bw / 2 + i * (bw + gap), 0);
+      b.eventMode = "static";
+      b.cursor = "pointer";
+      const optIdx = i;
+      b.on("pointertap", () => {
+        this.sel = optIdx;
+        this.clickedConfirm = true;
+      });
       this.buttons.addChild(b);
     }
     this.buttons.position.set(w / 2, h * 0.82);

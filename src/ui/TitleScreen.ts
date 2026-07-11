@@ -1,4 +1,4 @@
-import { Container, Graphics, Sprite, Texture } from "pixi.js";
+import { Container, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
 import type { Screen } from "./Screen";
 import type { Game } from "../core/Game";
 import { mkText, COL, buttonGlyph } from "./theme";
@@ -25,9 +25,14 @@ export class TitleScreen implements Screen {
   private goats: FloatGoat[] = [];
   private rng = makeRng(42);
   private t = 0;
+  private clicked = false;
 
   constructor(private game: Game) {
     this.container.addChild(this.bg, this.blobs);
+    // a click anywhere starts the party too
+    this.container.eventMode = "static";
+    this.container.cursor = "pointer";
+    this.container.on("pointertap", () => (this.clicked = true));
     for (let i = 0; i < 4; i++) {
       const pal = PALETTES[i * 2];
       const s = new Sprite(goatPreview(pal));
@@ -72,7 +77,8 @@ export class TitleScreen implements Screen {
   update(dt: number) {
     this.t += dt;
     // any input starts the party
-    const nav = this.anyConfirm();
+    const nav = this.anyConfirm() || this.clicked;
+    this.clicked = false;
     if (nav) {
       this.game.audio.resume();
       this.game.audio.play("go");
@@ -100,6 +106,7 @@ export class TitleScreen implements Screen {
   }
 
   resize(w: number, h: number) {
+    this.container.hitArea = new Rectangle(0, 0, w, h);
     this.bg.clear();
     this.bg.rect(0, 0, w, h).fill({ color: 0x171226 });
     this.blobs.clear();
