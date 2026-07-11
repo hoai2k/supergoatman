@@ -31,8 +31,8 @@ export const GOAT = {
   kickSpin: 0.02, // small angular kick for style
   kickReach: 0.72, // how far the legs sweep from the feet end
   kickWidth: 0.34,
-  kickKnockback: 2.5, // impulse imparted to victims
-  kickUpBias: 0.3, // victims get lofted a bit (juicier)
+  kickKnockback: 1.7, // impulse imparted to victims — a shove, not a cannon
+  kickUpBias: 0.24, // victims get lofted a bit (juicier)
   kickActiveTime: 0.16, // seconds the leg is "out" and can hit
   kickCooldown: 0.3, // seconds between kicks
   kickPopPower: 1.0,

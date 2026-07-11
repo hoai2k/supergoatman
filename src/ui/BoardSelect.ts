@@ -72,12 +72,13 @@ export class BoardSelectScreen implements Screen {
   update(dt: number) {
     this.t += dt;
     const nav = this.mergedNav();
-    if (nav.left) {
-      this.idx = (this.idx - 1 + this.meta.length) % this.meta.length;
+    // clamp at the ends — wrapping made all 11 tiles sweep across the screen
+    if (nav.left && this.idx > 0) {
+      this.idx--;
       this.game.audio.play("click");
     }
-    if (nav.right) {
-      this.idx = (this.idx + 1) % this.meta.length;
+    if (nav.right && this.idx < this.meta.length - 1) {
+      this.idx++;
       this.game.audio.play("click");
     }
     if (nav.up || nav.down) {
@@ -96,32 +97,46 @@ export class BoardSelectScreen implements Screen {
       this.game.toMatch();
       return;
     }
-    this.layoutTiles();
-    this.updateInfo();
+    this.layoutTiles(dt);
+    if (this.idx !== this.infoIdx) this.updateInfo();
   }
 
   private tileSpacing = 220;
 
-  private layoutTiles() {
-    // carousel: the selected tile sits centred; neighbours fan out and fade
+  private layoutTiles(dt: number) {
+    // carousel: the selected tile sits centred; neighbours fan out and fade.
+    // Time-based convergence so rapid taps never leave tiles piled up.
+    const k = 1 - Math.exp(-14 * dt);
     for (let i = 0; i < this.tiles.children.length; i++) {
       const tile = this.tiles.children[i] as Container;
       const rel = i - this.idx;
       const targetX = rel * this.tileSpacing;
-      tile.position.x += (targetX - tile.position.x) * 0.22;
-      tile.visible = Math.abs(rel) < 2.75;
+      tile.position.x += (targetX - tile.position.x) * k;
+      // never lag more than one slot behind — keeps slow machines tidy
+      const lag = tile.position.x - targetX;
+      const maxLag = this.tileSpacing * 0.95;
+      if (Math.abs(lag) > maxLag) tile.position.x = targetX + Math.sign(lag) * maxLag;
+      tile.visible = Math.abs(rel) < 2.3;
       const focused = rel === 0;
-      const targetS = focused ? 1.14 : Math.max(0.66, 0.92 - Math.abs(rel) * 0.13);
-      tile.scale.set(tile.scale.x + (targetS - tile.scale.x) * 0.2);
-      tile.alpha = tile.alpha + ((focused ? 1 : 0.45) - tile.alpha) * 0.2;
+      const targetS = focused ? 1.14 : Math.max(0.66, 0.9 - Math.abs(rel) * 0.14);
+      tile.scale.set(tile.scale.x + (targetS - tile.scale.x) * k);
+      tile.alpha = tile.alpha + ((focused ? 1 : 0.4) - tile.alpha) * k;
       tile.zIndex = 100 - Math.abs(rel);
+      // only the focused tile shows its name — neighbours stay clean
+      const label = tile.children[2];
+      if (label) label.alpha = label.alpha + ((focused ? 1 : 0) - label.alpha) * k;
     }
     this.tiles.sortChildren();
   }
 
+  private infoIdx = -1;
+
   private updateInfo() {
+    // rebuild ONLY when the selection changes, and destroy the old Text
+    // objects — rebuilding every frame leaked canvases and janked the menu
+    this.infoIdx = this.idx;
     const m = this.meta[this.idx];
-    this.info.removeChildren();
+    for (const c of this.info.removeChildren()) c.destroy();
     const name = mkText(m.name, { size: 40, weight: "900", fill: m.accent, stroke: COL.ink, strokeW: 7 });
     const blurb = mkText(m.blurb, { size: 24, weight: "700", fill: COL.cream });
     blurb.position.set(0, 44);

@@ -55,6 +55,31 @@ async function boot() {
   window.addEventListener("pointerdown", startAudio, { once: true });
   window.addEventListener("keydown", startAudio, { once: true });
 
+  // ---- fullscreen toggle (button + F key) ----
+  const fsBtn = document.createElement("button");
+  fsBtn.textContent = "⛶";
+  fsBtn.title = "Fullscreen (F)";
+  fsBtn.style.cssText =
+    "position:fixed;top:10px;right:10px;z-index:10;width:44px;height:44px;" +
+    "font-size:24px;line-height:1;color:#fff6e9;background:rgba(28,22,48,0.72);" +
+    "border:2px solid rgba(255,246,233,0.35);border-radius:10px;cursor:pointer;" +
+    "user-select:none;transition:opacity .2s;opacity:0.7;";
+  fsBtn.onmouseenter = () => (fsBtn.style.opacity = "1");
+  fsBtn.onmouseleave = () => (fsBtn.style.opacity = "0.7");
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+    fsBtn.blur(); // give key focus back to the game
+  };
+  fsBtn.onclick = toggleFullscreen;
+  document.addEventListener("fullscreenchange", () => {
+    fsBtn.textContent = document.fullscreenElement ? "🗗" : "⛶";
+  });
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "KeyF" && !e.repeat && !e.metaKey && !e.ctrlKey) toggleFullscreen();
+  });
+  document.body.appendChild(fsBtn);
+
   app.ticker.add((ticker) => {
     const dt = Math.min(0.05, ticker.deltaMS / 1000);
     game.update(dt);

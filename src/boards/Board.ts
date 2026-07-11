@@ -283,6 +283,12 @@ export abstract class Board {
     for (const goat of arena.goats) {
       if (goat.dead || goat.eliminated || goat.invulnT > 0) continue;
       const p = goat.pos;
+      // universal backstop: nobody gets to live in a crack below the arena
+      if (p.y > this.bounds.maxY + 1.3) {
+        arena.fx.burst("dust", p, { n: 8 });
+        arena.killGoat(goat, pick(["LOST", "OUT OF BOUNDS", "GONE SPELUNKING"]));
+        continue;
+      }
       const r = goat.radius * 0.55; // forgiving: need real contact, not a graze
       for (const z of this.hazardZones) {
         if (p.x + r > z.minX && p.x - r < z.maxX && p.y + r > z.minY && p.y - r < z.maxY) {

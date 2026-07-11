@@ -36,9 +36,10 @@ export class TundraBoard extends Board {
     this.solidPxRect(arena, 0, 60, 210, 941);
     this.solidPxRect(arena, 1460, 60, 1672, 941);
 
-    // painted ice-spike beds at the rink edges
-    this.addKillZonePx(30, 590, 250, 760, { labels: ["ICICLE'D", "FLASH FROZEN", "SLUSHIED"], fx: "star", sfx: "pop" });
-    this.addKillZonePx(1430, 590, 1650, 760, { labels: ["ICICLE'D", "FLASH FROZEN", "SLUSHIED"], fx: "star", sfx: "pop" });
+    // painted ice-spike beds at the rink edges (deep enough to catch anyone
+    // who slips into the gap between rink and glacier)
+    this.addKillZonePx(30, 590, 250, 941, { labels: ["ICICLE'D", "FLASH FROZEN", "SLUSHIED"], fx: "star", sfx: "pop" });
+    this.addKillZonePx(1430, 590, 1650, 941, { labels: ["ICICLE'D", "FLASH FROZEN", "SLUSHIED"], fx: "star", sfx: "pop" });
 
     this.spawns = [
       { pos: { x: -6.5, y: 2.2 }, angle: 0 },

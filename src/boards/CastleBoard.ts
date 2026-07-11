@@ -20,8 +20,9 @@ export class CastleBoard extends Board {
 
     // the big blue mattress — a trampoline the size of a zip code
     this.solidPxRect(arena, 340, 628, 1330, 800, { restitution: 0.82, bouncy: true, friction: 0.7 });
-    // pink front rim, slightly lower, also bouncy
-    this.solidPxRect(arena, 60, 745, 1620, 850, { restitution: 0.6, bouncy: true });
+    // pink front rim, slightly lower, also bouncy — full width so no goat
+    // can wedge itself into a crack beside the walls
+    this.solidPxRect(arena, 0, 745, 1672, 850, { restitution: 0.6, bouncy: true });
     // raised side ledges (where the spikes live)
     this.solidPxRect(arena, 0, 598, 330, 745, { restitution: 0.35, bouncy: true });
     this.solidPxRect(arena, 1340, 598, 1672, 745, { restitution: 0.35, bouncy: true });
