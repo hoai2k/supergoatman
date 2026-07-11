@@ -41,6 +41,9 @@ export class BoardSelectScreen implements Screen {
   private idx = 0;
   private t = 0;
   private diffText = mkText("", { size: 24, weight: "900", fill: COL.good, stroke: COL.ink, strokeW: 5 });
+  /** Stable meta-order tile references — tiles.children gets re-sorted by
+   *  zIndex, so it must NEVER be used for the i -> board mapping. */
+  private tileList: Container[] = [];
 
   constructor(private game: Game) {
     this.meta = BOARDS.map((b) => {
@@ -50,6 +53,7 @@ export class BoardSelectScreen implements Screen {
       return m;
     });
     this.idx = Math.max(0, this.meta.findIndex((m) => m.id === game.session.boardId));
+    this.tiles.sortableChildren = true;
     this.container.addChild(this.bg, this.header, this.tiles, this.info, this.footer);
   }
 
@@ -105,10 +109,11 @@ export class BoardSelectScreen implements Screen {
 
   private layoutTiles(dt: number) {
     // carousel: the selected tile sits centred; neighbours fan out and fade.
-    // Time-based convergence so rapid taps never leave tiles piled up.
+    // Iterate tileList (stable meta order) — NOT tiles.children, which Pixi
+    // re-sorts by zIndex (using it caused tiles to swap slots every frame).
     const k = 1 - Math.exp(-14 * dt);
-    for (let i = 0; i < this.tiles.children.length; i++) {
-      const tile = this.tiles.children[i] as Container;
+    for (let i = 0; i < this.tileList.length; i++) {
+      const tile = this.tileList[i];
       const rel = i - this.idx;
       const targetX = rel * this.tileSpacing;
       tile.position.x += (targetX - tile.position.x) * k;
@@ -121,12 +126,11 @@ export class BoardSelectScreen implements Screen {
       const targetS = focused ? 1.14 : Math.max(0.66, 0.9 - Math.abs(rel) * 0.14);
       tile.scale.set(tile.scale.x + (targetS - tile.scale.x) * k);
       tile.alpha = tile.alpha + ((focused ? 1 : 0.4) - tile.alpha) * k;
-      tile.zIndex = 100 - Math.abs(rel);
+      tile.zIndex = 100 - Math.abs(rel); // sortableChildren handles draw order
       // only the focused tile shows its name — neighbours stay clean
       const label = tile.children[2];
       if (label) label.alpha = label.alpha + ((focused ? 1 : 0) - label.alpha) * k;
     }
-    this.tiles.sortChildren();
   }
 
   private infoIdx = -1;
@@ -153,7 +157,8 @@ export class BoardSelectScreen implements Screen {
     this.bg.rect(0, 0, w, h).fill({ color: 0x171226 });
     this.header.position.set(w / 2, h * 0.12);
 
-    this.tiles.removeChildren();
+    for (const c of this.tiles.removeChildren()) c.destroy({ children: true });
+    this.tileList = [];
     const tileW = Math.min(210, w * 0.18);
     this.tileSpacing = tileW + 30;
     for (let i = 0; i < this.meta.length; i++) {
@@ -169,6 +174,7 @@ export class BoardSelectScreen implements Screen {
       tile.addChild(p, thumb, label);
       tile.position.set((i - this.idx) * this.tileSpacing, 0);
       this.tiles.addChild(tile);
+      this.tileList.push(tile);
     }
     this.tiles.position.set(w / 2, h * 0.34);
 
