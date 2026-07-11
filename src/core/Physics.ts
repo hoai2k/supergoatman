@@ -14,9 +14,88 @@ export class Physics {
   world: RAPIER.World;
   private acc = 0;
 
+  /**
+   * One-way ("brawler") platforms: solid when landed on from above, thin
+   * air when jumped through from below.
+   *
+   * The filter hook runs INSIDE world.step(), where the World is mutably
+   * borrowed by wasm — touching it there throws "recursive use of an
+   * object". So everything the hook needs is snapshotted into plain JS maps
+   * right before each step, and the hook reads only those.
+   */
+  oneWay = new Set<number>();
+  private oneWayTop = new Map<number, number>(); // platform handle -> top plane y
+  private bottoms = new Map<number, number>(); // dynamic collider -> lowest point y
+  /** Cached hull vertices per collider (shape.vertices round-trips wasm). */
+  private vertCache = new Map<number, Float32Array>();
+
+  /** Register a (static, axis-aligned cuboid) collider as a one-way deck. */
+  addOneWay(collider: RAPIER.Collider) {
+    collider.setActiveHooks(RAPIER.ActiveHooks.FILTER_CONTACT_PAIRS);
+    this.oneWay.add(collider.handle);
+    const cub = collider.shape as RAPIER.Cuboid;
+    this.oneWayTop.set(collider.handle, collider.translation().y - cub.halfExtents.y); // y grows down
+  }
+
+  private hooks: RAPIER.PhysicsHooks = {
+    filterContactPair: (c1, c2) => {
+      let top = this.oneWayTop.get(c1);
+      let other = c2;
+      if (top === undefined) {
+        top = this.oneWayTop.get(c2);
+        other = c1;
+      }
+      if (top === undefined) return RAPIER.SolverFlags.COMPUTE_IMPULSE;
+      const bottom = this.bottoms.get(other);
+      if (bottom === undefined) return RAPIER.SolverFlags.COMPUTE_IMPULSE;
+      // solid exactly when the body's lowest point sits at/above the deck's
+      // top plane (0.15 of penetration slack keeps landings sticky)
+      return bottom <= top + 0.15 ? RAPIER.SolverFlags.COMPUTE_IMPULSE : null;
+    },
+    filterIntersectionPair: () => true,
+  };
+
+  /** Pre-step snapshot of every dynamic body's lowest point. */
+  private snapshotBottoms() {
+    this.bottoms.clear();
+    this.world.forEachCollider((c) => {
+      const body = c.parent();
+      if (!body || body.bodyType() !== RAPIER.RigidBodyType.Dynamic) return;
+      this.bottoms.set(c.handle, c.translation().y + this.extentDown(c));
+    });
+  }
+
+  /** Distance from body centre to its lowest point at its CURRENT rotation. */
+  private extentDown(c: RAPIER.Collider): number {
+    const s = c.shape;
+    const rot = c.rotation();
+    if (s instanceof RAPIER.Ball) return s.radius;
+    if (s instanceof RAPIER.Capsule) return s.halfHeight * Math.abs(Math.cos(rot)) + s.radius;
+    if (s instanceof RAPIER.Cuboid)
+      return s.halfExtents.x * Math.abs(Math.sin(rot)) + s.halfExtents.y * Math.abs(Math.cos(rot));
+    if (s instanceof RAPIER.ConvexPolygon) {
+      let v = this.vertCache.get(c.handle);
+      if (!v) {
+        v = s.vertices;
+        this.vertCache.set(c.handle, v);
+      }
+      const sin = Math.sin(rot);
+      const cos = Math.cos(rot);
+      let m = 0;
+      for (let i = 0; i < v.length; i += 2) m = Math.max(m, v[i] * sin + v[i + 1] * cos);
+      return m;
+    }
+    return 0.5;
+  }
+
+  // hooks only reach the solver via the stepWithEvents path, so an event
+  // queue must ride along even though nobody reads it (auto-drained)
+  private eventQueue: RAPIER.EventQueue;
+
   constructor(gravity: Vec2) {
     this.world = new RAPIER.World(new RAPIER.Vector2(gravity.x, gravity.y));
     this.world.timestep = FIXED_DT;
+    this.eventQueue = new RAPIER.EventQueue(true);
   }
 
   setGravity(g: Vec2) {
@@ -29,7 +108,8 @@ export class Physics {
     let steps = 0;
     while (this.acc >= FIXED_DT && steps < MAX_SUBSTEPS) {
       onStep?.();
-      this.world.step();
+      if (this.oneWay.size) this.snapshotBottoms();
+      this.world.step(this.eventQueue, this.hooks);
       this.acc -= FIXED_DT;
       steps++;
     }
@@ -70,6 +150,7 @@ export class Physics {
   }
 
   destroy() {
+    this.eventQueue.free();
     this.world.free();
   }
 }

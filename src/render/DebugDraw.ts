@@ -24,12 +24,13 @@ export class DebugDraw {
     this.match.physics.world.forEachCollider((c) => {
       const body = c.parent();
       const type = body ? body.bodyType() : RAPIER.RigidBodyType.Fixed;
-      const color =
-        type === RAPIER.RigidBodyType.Fixed
+      const color = this.match.physics.oneWay.has(c.handle)
+        ? 0xffee33 // one-way (jump-through) platform decks
+        : type === RAPIER.RigidBodyType.Fixed
           ? 0x33ff88 // static terrain
           : type === RAPIER.RigidBodyType.Dynamic
             ? 0xffaa33 // dynamic (goats, critters, ragdolls, planks)
-            : 0x33ddff; // kinematic (walkers, balloons, spinner)
+            : 0x33ddff; // kinematic (balloons, spinner)
       const t = c.translation();
       const rot = c.rotation();
       const shape = c.shape;

@@ -49,6 +49,8 @@ export class Goat {
   eliminated = false; // out of lives for good
   respawnT = 0;
   invulnT = 0;
+  /** Chosen at death so the camera can keep the return spot in frame. */
+  pendingSpawn: { pos: Vec2; angle: number } | null = null;
 
   private intent: Intent = neutralIntent();
   private prevKick = false;
@@ -66,6 +68,10 @@ export class Goat {
   private grabTarget: GrabTarget | null = null;
   private twistAccum = 0;
   private lastRelAngle = 0;
+  // wall-scaling: a kick right after letting go fires at FULL strength, and
+  // a short lockout stops the still-held grab from re-latching mid-launch
+  private wallJumpT = 0;
+  private grabLockT = 0;
 
   constructor(
     physics: Arena["physics"],
@@ -169,6 +175,8 @@ export class Goat {
     this.kickCd = Math.max(0, this.kickCd - dt);
     this.buttCd = Math.max(0, this.buttCd - dt);
     this.invulnT = Math.max(0, this.invulnT - dt);
+    this.wallJumpT = Math.max(0, this.wallJumpT - dt);
+    this.grabLockT = Math.max(0, this.grabLockT - dt);
 
     if (this.alive) {
       this.applyRoll();
@@ -264,8 +272,17 @@ export class Goat {
     this.kicking = GOAT.kickActiveTime;
     this.kickCd = GOAT.kickActiveTime + GOAT.kickCooldown;
     this.kickHits.clear();
-    const grounded = this.feetGrounded();
-    const power = GOAT.kickImpulse * (grounded ? 1 : GOAT.kickAirScale);
+    // kicking while hanging on = wall jump: let go and launch at full power.
+    // The lockout keeps the still-held grab from instantly re-latching, so
+    // you can scale a wall by alternating grab and kick.
+    if (this.grabJoint) {
+      this.releaseGrab(arena);
+      this.grabLockT = 0.25;
+    }
+    const boost = this.wallJumpT > 0; // fresh off a hold: spring off the wall
+    const grounded = this.feetGrounded() || boost;
+    const power =
+      GOAT.kickImpulse * (boost ? GOAT.wallKickBoost : grounded ? 1 : GOAT.kickAirScale);
     this.body.applyImpulse(scale(this.headDir(), power), true);
     this.body.applyTorqueImpulse(this.intent.roll * GOAT.kickSpin, true);
     const feet = this.localToWorld(FEET_LOCAL);
@@ -346,6 +363,7 @@ export class Goat {
       return;
     }
     if (!wantGrab) return;
+    if (this.grabLockT > 0) return; // just wall-jumped; hands busy
 
     const hand = this.localToWorld(HAND_LOCAL);
     let best: { body: RigidBody; point: Vec2; kind: string; d: number; neckHold: boolean } | null =
@@ -440,6 +458,7 @@ export class Goat {
       this.grabJoint = null;
       this.grabTarget = null;
       this.twistAccum = 0;
+      this.wallJumpT = 0.28; // fresh off a hold: the next kick launches full-power
       arena.sfx.play("release", { volume: 0.35 });
     }
   }
@@ -483,6 +502,7 @@ export class Goat {
   respawn(spawn: Vec2, angle: number) {
     this.dead = false;
     this.alive = true;
+    this.pendingSpawn = null;
     this.view.visible = true;
     this.invulnT = 1.6;
     this.body.setEnabled(true);

@@ -28,16 +28,17 @@ export class GeometryBoard extends Board {
     this.addBackdrop("geometry");
     this.addArenaShell(arena);
 
-    // neon slabs matched to the painting
-    this.solidPxRect(arena, 420, 638, 1260, 810); // central platform
-    this.solidPxRect(arena, 690, 308, 985, 388); // floating hex
-    this.solidPxRect(arena, 170, 595, 420, 665); // left steps
-    this.solidPxRect(arena, 350, 515, 545, 575);
-    this.solidPxRect(arena, 245, 478, 345, 532);
-    this.solidPxRect(arena, 1175, 512, 1390, 572); // right steps
-    this.solidPxRect(arena, 1290, 588, 1500, 658);
-    this.solidPxRect(arena, 0, 650, 265, 720); // low outer benches
-    this.solidPxRect(arena, 1400, 645, 1672, 715);
+    // neon slabs matched to the painting — every one hovers, every one is a
+    // brawler platform: leap up through, land on top
+    this.solidPxRect(arena, 420, 638, 1260, 682, { oneWay: true }); // central platform
+    this.solidPxRect(arena, 690, 308, 985, 352, { oneWay: true }); // floating hex
+    this.solidPxRect(arena, 170, 595, 420, 639, { oneWay: true }); // left steps
+    this.solidPxRect(arena, 350, 515, 545, 559, { oneWay: true });
+    this.solidPxRect(arena, 245, 478, 345, 532, { oneWay: true });
+    this.solidPxRect(arena, 1175, 512, 1390, 556, { oneWay: true }); // right steps
+    this.solidPxRect(arena, 1290, 588, 1500, 632, { oneWay: true });
+    this.solidPxRect(arena, 0, 650, 265, 694, { oneWay: true }); // low outer benches
+    this.solidPxRect(arena, 1400, 645, 1672, 689, { oneWay: true });
     // grid floor at the bottom so the void doesn't eat everyone instantly
     this.solidRect(arena, this.bounds.minX, 5.9, this.bounds.maxX, 6.75);
 

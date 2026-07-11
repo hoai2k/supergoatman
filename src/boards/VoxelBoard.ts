@@ -38,9 +38,10 @@ export class VoxelBoard extends Board {
     this.solidPxRect(arena, 630, 595, 1050, 660); // hill tiers
     this.solidPxRect(arena, 680, 545, 1000, 600);
     this.solidPxRect(arena, 730, 500, 930, 550);
-    this.solidPxRect(arena, 500, 445, 640, 490); // floating pads
-    this.solidPxRect(arena, 1035, 440, 1175, 485);
-    this.solidPxRect(arena, 795, 352, 875, 398);
+    // floating pads — jump up through them, land on top
+    this.solidPxRect(arena, 500, 445, 640, 490, { oneWay: true });
+    this.solidPxRect(arena, 1035, 440, 1175, 485, { oneWay: true });
+    this.solidPxRect(arena, 795, 352, 875, 398, { oneWay: true });
     // obsidian bowls at the edges
     this.solidPxRect(arena, 0, 630, 130, 941);
     this.solidPxRect(arena, 1580, 630, 1672, 941);

@@ -37,8 +37,9 @@ export class DungeonBoard extends Board {
 
     // stonework matched to the painting
     this.solidPxRect(arena, 285, 712, 1385, 830); // main hall floor
-    this.solidPxRect(arena, 225, 545, 510, 660); // left ledge
-    this.solidPxRect(arena, 1165, 540, 1450, 655); // right ledge
+    // the raised ledges hover over the hall — jump up through them
+    this.solidPxRect(arena, 225, 545, 510, 589, { oneWay: true }); // left ledge
+    this.solidPxRect(arena, 1165, 540, 1450, 584, { oneWay: true }); // right ledge
     this.solidPxRect(arena, 0, 60, 90, 941); // outer walls
     this.solidPxRect(arena, 1580, 60, 1672, 941);
     // pit floors beneath the spikes (so the corpses have somewhere to land)

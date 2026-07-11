@@ -28,14 +28,14 @@ export class TidepoolsBoard extends Board {
     this.addArenaShell(arena);
     this.root.addChild(this.layer);
 
-    // rocks matched to the painting
+    // rocks matched to the painting (hovering ones are jump-through decks)
     this.solidPxRect(arena, 480, 655, 1190, 810); // central slab
-    this.solidPxRect(arena, 240, 583, 500, 700); // left stepping stone
-    this.solidPxRect(arena, 1195, 568, 1450, 690); // right stepping stone
+    this.solidPxRect(arena, 240, 583, 500, 627, { oneWay: true }); // left stepping stone
+    this.solidPxRect(arena, 1195, 568, 1450, 612, { oneWay: true }); // right stepping stone
     this.solidPxRect(arena, 0, 100, 215, 941); // left cliff
     this.solidPxRect(arena, 1455, 130, 1672, 941); // right cliff
-    this.solidPxRect(arena, 215, 428, 500, 530); // upper-left shelf
-    this.solidPxRect(arena, 1180, 452, 1490, 545); // upper-right shelf
+    this.solidPxRect(arena, 215, 428, 500, 472, { oneWay: true }); // upper-left shelf
+    this.solidPxRect(arena, 1180, 452, 1490, 496, { oneWay: true }); // upper-right shelf
     // pool floor — the tide pools are shallow; you wade, you don't drown
     this.solidRect(arena, this.bounds.minX, 5.6, this.bounds.maxX, 6.75);
 

@@ -117,6 +117,9 @@ export class Match {
     this.hitstop = 0.14;
 
     goat.enterDeadState(this.arena);
+    // pick the comeback spot NOW so the camera can hold it in frame — no
+    // zooming tight onto the survivors and then jarringly back out
+    if (!goat.eliminated) goat.pendingSpawn = this.safestSpawn(goat);
     this.onRoundEvent?.("kill", { victim: goat.playerIndex, cause, byPlayer });
 
     if (goat.eliminated) {
@@ -130,7 +133,7 @@ export class Match {
       if (!goat.dead || goat.eliminated) continue;
       goat.respawnT -= dt;
       if (goat.respawnT <= 0) {
-        const sp = this.safestSpawn(goat);
+        const sp = goat.pendingSpawn ?? this.safestSpawn(goat);
         goat.respawn(sp.pos, sp.angle);
         this.fx.ring(sp.pos, goat.palette.body, 1.0);
         this.audio.play("blip");
@@ -205,6 +208,13 @@ export class Match {
 
     // ---- camera ----
     const pts: Vec2[] = this.goats.filter((g) => !g.dead && !g.eliminated).map((g) => g.pos);
+    // a fallen goat's return spot stays framed while they wait — the camera
+    // never dives onto the survivors only to yank back out at respawn
+    if (this.phase === "play") {
+      for (const g of this.goats) {
+        if (g.dead && !g.eliminated && g.pendingSpawn) pts.push(g.pendingSpawn.pos);
+      }
+    }
     this.board.decorateCameraPoints?.(pts);
     if (pts.length) this.camera.frame(pts);
     this.camera.update(dt);

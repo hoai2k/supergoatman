@@ -1,7 +1,7 @@
 import { Container } from "pixi.js";
 import { Board, type TerrainTheme } from "./Board";
 import type { Arena } from "../core/types";
-import { DynamicCritter, KinematicWalker } from "../entities/Critter";
+import { DynamicCritter, Walker } from "../entities/Critter";
 
 const THEME: TerrainTheme = { top: 0xcfe8ff, topLight: 0xffffff, face: 0x6f9fd8, faceDark: 0x4a6fa8 };
 
@@ -13,7 +13,7 @@ export class TundraBoard extends Board {
   gravityScale = 1;
 
   private layer = new Container();
-  private moose!: KinematicWalker;
+  private moose!: Walker;
   private penguins: DynamicCritter[] = [];
 
   build(arena: Arena) {
@@ -30,8 +30,8 @@ export class TundraBoard extends Board {
     // raised ice blocks (also slick)
     this.solidPxRect(arena, 455, 578, 700, 690, { friction: 0.04, icy: true });
     this.solidPxRect(arena, 975, 570, 1215, 690, { friction: 0.04, icy: true });
-    // floating berg
-    this.solidPxRect(arena, 695, 428, 955, 490, { friction: 0.08, icy: true });
+    // floating berg — leap up through it from the rink
+    this.solidPxRect(arena, 695, 428, 955, 490, { friction: 0.08, icy: true, oneWay: true });
     // glacier cliffs
     this.solidPxRect(arena, 0, 60, 210, 941);
     this.solidPxRect(arena, 1460, 60, 1672, 941);
@@ -49,7 +49,7 @@ export class TundraBoard extends Board {
     ];
 
     // wildlife: one moose with a commute, two smug penguins
-    this.moose = new KinematicWalker(arena, this.layer, "moose", 1.7, -7.8, 7.8, 3.15, 1.15);
+    this.moose = new Walker(arena, this.layer, "moose", 1.7, -7.8, 7.8, 3.15, 1.15);
     this.penguins.push(
       new DynamicCritter(arena, this.layer, "penguin", 0.62, "waddler", -2, 2.5, -8.5, 8.5),
       new DynamicCritter(arena, this.layer, "penguin", 0.56, "waddler", 2, 2.5, -8.5, 8.5),

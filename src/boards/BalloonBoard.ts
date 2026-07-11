@@ -57,10 +57,11 @@ export class BalloonBoard extends Board {
     this.root.addChild(this.layer);
 
     // cloud platforms painted into the backdrop (arena-art px coords);
-    // side clouds run flush to the walls so there's no wedge-pocket
-    this.solidPxRect(arena, 0, 428, 425, 520); // left cloud
-    this.solidPxRect(arena, 1245, 428, 1672, 520); // right cloud
-    this.solidPxRect(arena, 300, 535, 1290, 660); // big centre cloud
+    // side clouds run flush to the walls so there's no wedge-pocket.
+    // Clouds are clouds: rise up through them, land on top.
+    this.solidPxRect(arena, 0, 428, 425, 472, { oneWay: true }); // left cloud
+    this.solidPxRect(arena, 1245, 428, 1672, 472, { oneWay: true }); // right cloud
+    this.solidPxRect(arena, 300, 535, 1290, 579, { oneWay: true }); // big centre cloud
 
     // walls + ceiling
     this.addArenaShell(arena);

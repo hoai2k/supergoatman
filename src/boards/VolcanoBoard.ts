@@ -30,8 +30,9 @@ export class VolcanoBoard extends Board {
     this.solidPxRect(arena, 0, 528, 385, 800); // left shelf
     this.solidPxRect(arena, 600, 487, 1035, 800); // centre pillar
     this.solidPxRect(arena, 1285, 522, 1672, 800); // right shelf
-    this.solidPxRect(arena, 452, 578, 568, 652); // floating stone L
-    this.solidPxRect(arena, 1080, 573, 1198, 647); // floating stone R
+    // floating stones hover over the lava gaps — leap up through them
+    this.solidPxRect(arena, 452, 578, 568, 620, { oneWay: true }); // floating stone L
+    this.solidPxRect(arena, 1080, 573, 1198, 615, { oneWay: true }); // floating stone R
 
     // walls + ceiling so nobody leaves the painting
     this.addArenaShell(arena);

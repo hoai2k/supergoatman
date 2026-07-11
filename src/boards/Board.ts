@@ -101,14 +101,18 @@ export abstract class Board {
   }
 
   // ---- terrain helpers ---------------------------------------------------
-  /** Invisible static collider matched to painted scenery. */
+  /**
+   * Invisible static collider matched to painted scenery.
+   * `oneWay`: brawler-style platform — solid from above, jump-through from
+   * below. Only meaningful for slabs that HOVER over standable ground.
+   */
   solidRect(
     arena: Arena,
     x0: number,
     y0: number,
     x1: number,
     y1: number,
-    opts: { friction?: number; restitution?: number; icy?: boolean; bouncy?: boolean } = {},
+    opts: { friction?: number; restitution?: number; icy?: boolean; bouncy?: boolean; oneWay?: boolean } = {},
   ): Solid {
     const cx = (x0 + x1) / 2;
     const cy = (y0 + y1) / 2;
@@ -120,7 +124,8 @@ export abstract class Board {
       .setCollisionGroups(groups(CG.TERRAIN, CG.GOAT | CG.PROP));
     if (opts.icy) col.setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min);
     if (opts.bouncy) col.setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Max);
-    arena.physics.world.createCollider(col, body);
+    const collider = arena.physics.world.createCollider(col, body);
+    if (opts.oneWay) arena.physics.addOneWay(collider);
     const solid = { body, gfx: null };
     this.solids.push(solid);
     this.debugRects.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0, lethal: false });
@@ -134,7 +139,7 @@ export abstract class Board {
     py0: number,
     px1: number,
     py1: number,
-    opts: { friction?: number; restitution?: number; icy?: boolean; bouncy?: boolean } = {},
+    opts: { friction?: number; restitution?: number; icy?: boolean; bouncy?: boolean; oneWay?: boolean } = {},
   ): Solid {
     const a = this.px(px0, py0);
     const b = this.px(px1, py1);

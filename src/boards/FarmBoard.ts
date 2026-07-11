@@ -1,7 +1,7 @@
 import { Container } from "pixi.js";
 import { Board, type TerrainTheme } from "./Board";
 import type { Arena } from "../core/types";
-import { DynamicCritter, KinematicWalker } from "../entities/Critter";
+import { DynamicCritter, Walker } from "../entities/Critter";
 
 const THEME: TerrainTheme = { top: 0x8fd94b, topLight: 0xc0f27f, face: 0x9a6b3f, faceDark: 0x74502f };
 
@@ -13,7 +13,7 @@ export class FarmBoard extends Board {
   gravityScale = 1;
 
   private layer = new Container();
-  private walkers: KinematicWalker[] = [];
+  private walkers: Walker[] = [];
   private sheep: DynamicCritter[] = [];
 
   build(arena: Arena) {
@@ -27,15 +27,15 @@ export class FarmBoard extends Board {
 
     // the paddock
     this.solidPxRect(arena, 150, 700, 1520, 850);
-    // centre table (top only; you can brawl underneath it)
-    this.solidPxRect(arena, 600, 493, 1075, 560);
+    // centre table (jump up through the top, brawl underneath it)
+    this.solidPxRect(arena, 600, 493, 1075, 537, { oneWay: true });
     this.solidPxRect(arena, 640, 560, 700, 700); // legs
     this.solidPxRect(arena, 950, 560, 1010, 700);
     // floating plank
-    this.solidPxRect(arena, 688, 352, 977, 402);
+    this.solidPxRect(arena, 688, 352, 977, 402, { oneWay: true });
     // benches (tops only)
-    this.solidPxRect(arena, 315, 588, 555, 640);
-    this.solidPxRect(arena, 1105, 583, 1345, 635);
+    this.solidPxRect(arena, 315, 588, 555, 640, { oneWay: true });
+    this.solidPxRect(arena, 1105, 583, 1345, 635, { oneWay: true });
     // rusty machinery blocks the edges
     this.solidPxRect(arena, 0, 520, 215, 941);
     this.solidPxRect(arena, 1375, 560, 1672, 941);
@@ -53,8 +53,8 @@ export class FarmBoard extends Board {
 
     // livestock
     this.walkers.push(
-      new KinematicWalker(arena, this.layer, "cow", 1.25, -5.8, 5.8, 3.29, 0.7),
-      new KinematicWalker(arena, this.layer, "donkey", 1.2, -6.5, 6.5, 3.29, 0.95, true),
+      new Walker(arena, this.layer, "cow", 1.25, -5.8, 5.8, 3.29, 0.7),
+      new Walker(arena, this.layer, "donkey", 1.2, -6.5, 6.5, 3.29, 0.95, true),
     );
     this.sheep.push(
       new DynamicCritter(arena, this.layer, "sheep", 0.72, "sheep", -3.5, 2.4, -7, 7),

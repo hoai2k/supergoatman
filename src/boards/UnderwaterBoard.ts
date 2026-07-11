@@ -28,7 +28,8 @@ export class UnderwaterBoard extends Board {
     this.solidPxRect(arena, 0, 545, 1672, 750); // main sandy ledge
     this.solidPxRect(arena, 0, 303, 430, 545); // left pillar
     this.solidPxRect(arena, 1215, 310, 1672, 545); // right pillar
-    this.solidPxRect(arena, 700, 348, 980, 470); // floating centre platform
+    // floating centre platform: swim up through it, land on top
+    this.solidPxRect(arena, 700, 348, 980, 392, { oneWay: true });
 
     // walls + ceiling (the surface) — glass aquarium rules
     this.addArenaShell(arena);

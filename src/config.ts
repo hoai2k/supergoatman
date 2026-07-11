@@ -28,6 +28,7 @@ export const GOAT = {
   // Kick: launches head-first (feet push off). Aimed by body orientation.
   kickImpulse: 2.9, // self launch impulse (grounded) — a hop, not a rocket
   kickAirScale: 0.45, // fraction of launch impulse when feet aren't near a surface
+  wallKickBoost: 1.35, // kick strength right after releasing a grab — springs off walls
   kickSpin: 0.02, // small angular kick for style
   // Hit envelope matched to the ART: the drawn leg tip reaches ~0.23 beyond
   // the hooves, so the sweep is short and thin — you hit when the legs
