@@ -24,6 +24,8 @@ floppy control **is** the game.
 | Roll / tumble | Left stick / D-pad | `A` `D` | `←` `→` |
 | Kick (jump / attack / swim) | `A` or `RT` | `Space` | `RShift` / `/` |
 | Grab (ledges, balloons, rivals) | `X` / `RB` / `LB` | `LShift` / `E` | `.` / `RCtrl` |
+| Headbutt (short lunge) | `Y` | `W` | `↑` |
+| Precise roll (hold: slower turning) | `B` | `S` | `↓` |
 | Pause | `Start` | `Enter` | `\` |
 
 - **Kick** launches you head-first (your legs push off whatever's behind them) — so aim by rotating your body. It also boots rivals, pops balloons, and whips bridges.

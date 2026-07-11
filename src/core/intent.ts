@@ -5,8 +5,10 @@ export interface Intent {
   aimY: number;
   kick: boolean; // held; goat edge-detects
   grab: boolean; // held
+  butt: boolean; // held; goat edge-detects — short headbutt lunge
+  precise: boolean; // held — slower, finer body rotation
 }
 
 export function neutralIntent(): Intent {
-  return { roll: 0, aimX: 0, aimY: 0, kick: false, grab: false };
+  return { roll: 0, aimX: 0, aimY: 0, kick: false, grab: false, butt: false, precise: false };
 }

@@ -60,8 +60,8 @@ export class UnderwaterBoard extends Board {
     });
 
     this.spawns = [
-      { pos: { x: -8.5, y: -3.4 }, angle: 0 },
-      { pos: { x: 8.6, y: -3.3 }, angle: 0 },
+      { pos: { x: -7.3, y: -3.4 }, angle: 0 },
+      { pos: { x: 7.4, y: -3.3 }, angle: 0 },
       { pos: { x: 0.0, y: -2.8 }, angle: 0 },
       { pos: { x: 3.4, y: 0.2 }, angle: 0 },
     ];

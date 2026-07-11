@@ -53,6 +53,9 @@ export class Goat {
   private intent: Intent = neutralIntent();
   private prevKick = false;
   private pendingKick = false;
+  private prevButt = false;
+  private pendingButt = false;
+  private buttCd = 0;
 
   private kicking = 0;
   private kickCd = 0;
@@ -106,7 +109,7 @@ export class Goat {
     // soft glow around the hands while the grab button is held
     this.grabGlow = new Sprite(glowTexture());
     this.grabGlow.anchor.set(0.5);
-    this.grabGlow.position.set(HAND_LOCAL.x - 0.04, HAND_LOCAL.y + 0.12);
+    this.grabGlow.position.set(HAND_LOCAL.x, HAND_LOCAL.y);
     this.grabGlow.blendMode = "add";
     this.grabGlow.visible = false;
     this.view.addChild(this.grabGlow);
@@ -155,6 +158,8 @@ export class Goat {
     this.intent = intent;
     if (intent.kick && !this.prevKick) this.pendingKick = true;
     this.prevKick = intent.kick;
+    if (intent.butt && !this.prevButt) this.pendingButt = true;
+    this.prevButt = intent.butt;
   }
 
   // ---- one fixed physics step -------------------------------------------
@@ -162,14 +167,17 @@ export class Goat {
     if (this.dead || this.eliminated) return;
     const dt = FIXED_DT;
     this.kickCd = Math.max(0, this.kickCd - dt);
+    this.buttCd = Math.max(0, this.buttCd - dt);
     this.invulnT = Math.max(0, this.invulnT - dt);
 
     if (this.alive) {
       this.applyRoll();
       this.updateGrab(arena);
       if (this.pendingKick && this.kickCd <= 0) this.startKick(arena);
+      if (this.pendingButt && this.buttCd <= 0) this.headbutt(arena);
     }
     this.pendingKick = false;
+    this.pendingButt = false;
 
     if (this.kicking > 0) {
       this.kicking -= dt;
@@ -194,13 +202,61 @@ export class Goat {
 
   private applyRoll() {
     const roll = this.intent.roll;
-    if (Math.abs(roll) < 0.02) return;
+    const precise = this.intent.precise;
+    if (Math.abs(roll) < 0.02) {
+      // precise mode also brakes leftover spin so you can hold an aim
+      if (precise) this.body.setAngvel(this.body.angvel() * GOAT.preciseBrake, false);
+      return;
+    }
+    const torque = GOAT.rollTorque * (precise ? GOAT.preciseTorque : 1);
+    const maxSpin = GOAT.maxRollSpeed * (precise ? GOAT.preciseMaxSpin : 1);
     const av = this.body.angvel();
-    if (Math.sign(roll) !== Math.sign(av) || Math.abs(av) < GOAT.maxRollSpeed) {
-      this.body.applyTorqueImpulse(roll * GOAT.rollTorque, true);
+    if (Math.sign(roll) !== Math.sign(av) || Math.abs(av) < maxSpin) {
+      this.body.applyTorqueImpulse(roll * torque, true);
+    }
+    if (precise && Math.abs(av) > maxSpin) {
+      this.body.setAngvel(Math.sign(av) * maxSpin, false);
     }
     if (this.groundedDown()) {
-      this.body.applyImpulse({ x: roll * GOAT.groundRollAssist * FIXED_DT, y: 0 }, true);
+      const assist = GOAT.groundRollAssist * (precise ? 0.6 : 1);
+      this.body.applyImpulse({ x: roll * assist * FIXED_DT, y: 0 }, true);
+    }
+  }
+
+  /** Y button: a short horn-first lunge — a pocket-sized kick. */
+  private headbutt(arena: Arena) {
+    this.buttCd = GOAT.buttCooldown;
+    const head = this.headWorld();
+    const dir = this.headDir();
+    const grounded = this.groundedDown() || this.feetGrounded();
+    const power = GOAT.buttImpulse * (grounded ? 1 : GOAT.buttAirScale);
+    this.body.applyImpulse(scale(dir, power), true);
+    arena.fx.burst("star", head, { n: 5 });
+    arena.sfx.play("thud", { rate: 1.35, volume: 0.6 });
+
+    for (const other of arena.goats) {
+      if (other === this || other.dead || other.eliminated) continue;
+      const d = Math.hypot(other.pos.x - head.x, other.pos.y - head.y);
+      if (d < GOAT.buttRadius + BODY_RADIUS) {
+        const away = norm(sub(other.pos, head));
+        other.body.applyImpulse(
+          { x: away.x * GOAT.buttKnockback, y: away.y * GOAT.buttKnockback - 0.5 },
+          true,
+        );
+        other.body.applyTorqueImpulse((Math.random() - 0.5) * 0.2, true);
+        arena.fx.burst("impact", other.pos, { n: 6 });
+        arena.fx.popText({ x: other.pos.x, y: other.pos.y - 0.5 }, "BAAH!", this.palette.body);
+        arena.fx.shake(3);
+      }
+    }
+    for (const prop of arena.props) {
+      if (!prop.kickable || !prop.alive) continue;
+      const pp = prop.body.translation();
+      const d = Math.hypot(pp.x - head.x, pp.y - head.y);
+      if (d < GOAT.buttRadius + prop.radius) {
+        const away = norm(sub({ x: pp.x, y: pp.y }, head));
+        prop.onKick?.(away, 0.6, this.playerIndex);
+      }
     }
   }
 

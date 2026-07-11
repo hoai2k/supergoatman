@@ -1,6 +1,6 @@
 import type { Goat } from "../entities/Goat";
 import type { Arena } from "../core/types";
-import type { Intent } from "../core/intent";
+import { neutralIntent, type Intent } from "../core/intent";
 import { angleDelta, clamp, dist, type Vec2 } from "../core/math";
 
 interface Tuning {
@@ -46,7 +46,7 @@ export class GoatAI {
     const angle = goat.angle;
     const vel = goat.vel;
 
-    const intent: Intent = { roll: 0, aimX: 0, aimY: 0, kick: false, grab: false };
+    const intent: Intent = neutralIntent();
 
     const target = this.targetIdx >= 0 ? arena.goats[this.targetIdx] : undefined;
     const safeTarget = target && !target.dead ? target : this.nearest(goat, arena);
@@ -95,6 +95,9 @@ export class GoatAI {
       intent.roll = clamp(err * 1.6, -1, 1);
       if (Math.abs(err) < 0.55 && this.kickHold > 0) intent.kick = true;
       if (this.grabHold > 0 && d < 1.4) intent.grab = true;
+      // if the rival ended up on the HEAD side and close, deliver a headbutt
+      const headErr = angleDelta(angle, Math.atan2(to.y, to.x));
+      if (Math.abs(headErr) < 0.5 && d < 1.2 && this.kickHold > 0) intent.butt = true;
     }
 
     return intent;

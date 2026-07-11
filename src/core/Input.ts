@@ -1,4 +1,4 @@
-import type { Intent } from "./intent";
+import { neutralIntent, type Intent } from "./intent";
 
 /** How a player slot is being driven. */
 export type Source =
@@ -95,19 +95,21 @@ export class InputHub {
   intent(src: Source): Intent {
     if (src.kind === "gamepad") return this.padIntent(src.index);
     if (src.kind === "keyboard") return this.keyIntent(SCHEMES[src.scheme]);
-    return { roll: 0, aimX: 0, aimY: 0, kick: false, grab: false };
+    return neutralIntent();
   }
 
   private padIntent(index: number): Intent {
     const p = this.pads[index];
-    if (!p) return { roll: 0, aimX: 0, aimY: 0, kick: false, grab: false };
+    if (!p) return neutralIntent();
     const lx = dz(p.axes[0] ?? 0);
     let roll = lx;
     if (p.down[14]) roll = -1; // dpad left
     if (p.down[15]) roll = 1; // dpad right
     const kick = !!(p.down[0] || p.down[7]); // A or RT
     const grab = !!(p.down[2] || p.down[5] || p.down[4] || p.down[6]); // X / RB / LB / LT
-    return { roll, aimX: dz(p.axes[2] ?? 0), aimY: dz(p.axes[3] ?? 0), kick, grab };
+    const butt = !!p.down[3]; // Y — headbutt
+    const precise = !!p.down[1]; // B — slow, fine rotation
+    return { roll, aimX: dz(p.axes[2] ?? 0), aimY: dz(p.axes[3] ?? 0), kick, grab, butt, precise };
   }
 
   private keyIntent(s: KeyScheme): Intent {
@@ -119,6 +121,8 @@ export class InputHub {
       aimY: (on(s.down) ? 1 : 0) - (on(s.up) ? 1 : 0),
       kick: on(s.kick),
       grab: on(s.grab),
+      butt: on(s.up), // W / ↑ — headbutt
+      precise: on(s.down), // S / ↓ — slow, fine rotation
     };
   }
 

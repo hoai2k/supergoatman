@@ -62,8 +62,8 @@ export class BridgeBoard extends Board {
     });
 
     this.spawns = [
-      { pos: { x: -9.6, y: -1.6 }, angle: 0 },
-      { pos: { x: 9.6, y: -1.6 }, angle: 0 },
+      { pos: { x: -8.6, y: -1.6 }, angle: 0 },
+      { pos: { x: 8.6, y: -1.6 }, angle: 0 },
       { pos: { x: -3.6, y: -1.4 }, angle: 0 },
       { pos: { x: 3.6, y: -1.4 }, angle: 0 },
     ];

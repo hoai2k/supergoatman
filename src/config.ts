@@ -37,6 +37,18 @@ export const GOAT = {
   kickCooldown: 0.3, // seconds between kicks
   kickPopPower: 1.0,
 
+  // Headbutt (Y): a short forward lunge — a pocket-sized kick from the horns.
+  buttImpulse: 1.5, // self lunge along the head direction
+  buttAirScale: 0.7,
+  buttKnockback: 1.7, // impulse imparted to victims
+  buttRadius: 0.36, // hit range around the head
+  buttCooldown: 0.55,
+
+  // Precise mode (hold B): slower, finer body rotation for lining up shots.
+  preciseTorque: 0.4, // multiplier on rollTorque
+  preciseMaxSpin: 0.5, // multiplier on maxRollSpeed
+  preciseBrake: 0.88, // per-step angular damping when the stick is released
+
   // Hard caps: nobody exceeds these no matter how many kicks stack up.
   maxSpeed: 8.0, // u/s
   maxSpin: 12.0, // rad/s

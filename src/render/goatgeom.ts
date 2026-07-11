@@ -56,7 +56,7 @@ export const HULL_LOCAL: number[] = HULL_PX.flatMap(([x, y]) => [
 // Key body locations in local world units (from the neutral pose).
 export const HEAD_LOCAL = { x: 0.24, y: -0.19 }; // face/skull centre
 export const HEAD_RADIUS = 0.2;
-export const HAND_LOCAL = { x: 0.42, y: -0.05 }; // muzzle / front paws
+export const HAND_LOCAL = { x: 0.28, y: 0.22 }; // the front paws themselves
 export const FEET_LOCAL = { x: -0.38, y: 0.16 }; // rear hooves
 export const BODY_RADIUS = 0.42; // rough bounding radius for hazard tests
 

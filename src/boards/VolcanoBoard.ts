@@ -52,8 +52,8 @@ export class VolcanoBoard extends Board {
     });
 
     this.spawns = [
-      { pos: { x: -8.6, y: -0.2 }, angle: 0 },
-      { pos: { x: 8.8, y: -0.3 }, angle: 0 },
+      { pos: { x: -7.4, y: -0.2 }, angle: 0 },
+      { pos: { x: 7.6, y: -0.3 }, angle: 0 },
       { pos: { x: -1.7, y: -0.8 }, angle: 0 },
       { pos: { x: 2.0, y: -0.8 }, angle: 0 },
     ];

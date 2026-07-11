@@ -82,8 +82,8 @@ export class BalloonBoard extends Board {
     }
 
     this.spawns = [
-      { pos: { x: -8.4, y: -1.4 }, angle: 0 },
-      { pos: { x: 8.4, y: -1.4 }, angle: 0 },
+      { pos: { x: -7.2, y: -1.4 }, angle: 0 },
+      { pos: { x: 7.2, y: -1.4 }, angle: 0 },
       { pos: { x: -2.6, y: 0.1 }, angle: 0 },
       { pos: { x: 2.6, y: 0.1 }, angle: 0 },
     ];
