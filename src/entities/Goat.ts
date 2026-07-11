@@ -17,6 +17,7 @@ import type { Intent } from "../core/intent";
 import { neutralIntent } from "../core/intent";
 import type { Arena } from "../core/types";
 import { getSkin, type GoatSkin } from "../render/GoatSprites";
+import { glowTexture } from "../render/glow";
 import {
   BODY_RADIUS,
   FEET_LOCAL,
@@ -36,6 +37,8 @@ export class Goat {
   skin: GoatSkin;
   view: Container;
   private sprite: Sprite;
+  private grabGlow: Sprite;
+  private glowPhase = 0;
 
   playerIndex: number;
   palette: Palette;
@@ -99,6 +102,14 @@ export class Goat {
     this.sprite.anchor.set(this.skin.neutral.anchor.x, this.skin.neutral.anchor.y);
     this.sprite.scale.set(PX2U);
     this.view.addChild(this.sprite);
+
+    // soft glow around the hands while the grab button is held
+    this.grabGlow = new Sprite(glowTexture());
+    this.grabGlow.anchor.set(0.5);
+    this.grabGlow.position.set(HAND_LOCAL.x - 0.04, HAND_LOCAL.y + 0.12);
+    this.grabGlow.blendMode = "add";
+    this.grabGlow.visible = false;
+    this.view.addChild(this.grabGlow);
   }
 
   attach(world: Container) {
@@ -178,6 +189,7 @@ export class Goat {
 
     const kTarget = this.kicking > 0 ? kickCurve(1 - this.kicking / GOAT.kickActiveTime) : 0;
     this.kickAmt += (kTarget - this.kickAmt) * clamp(dt * 22, 0, 1);
+    this.glowPhase += dt;
   }
 
   private applyRoll() {
@@ -348,6 +360,7 @@ export class Goat {
     );
     this.grabJoint = arena.physics.world.createImpulseJoint(jd, this.body, target.body, true);
     this.grabTarget = { body: target.body, kind: target.kind, neckHold: target.neckHold };
+    arena.fx.ring(target.point, 0xffe896, 0.45);
     this.twistAccum = 0;
     if (target.kind === "goat") {
       const victim = this.findGoatByBody(arena, target.body);
@@ -433,6 +446,18 @@ export class Goat {
     this.view.position.set(p.x, p.y);
     this.view.rotation = this.angle;
     this.sprite.alpha = this.invulnT > 0 ? 0.5 + 0.35 * Math.sin(this.invulnT * 26) : 1;
+
+    // hand glow: pulses while reaching, locks bright once latched on
+    const reaching = this.alive && this.intent.grab;
+    const latched = this.grabJoint !== null;
+    this.grabGlow.visible = reaching || latched;
+    if (this.grabGlow.visible) {
+      const pulse = Math.sin(this.glowPhase * 11);
+      this.grabGlow.alpha = latched ? 0.95 : 0.55 + 0.22 * pulse;
+      const r = (latched ? 0.34 : 0.28 + 0.03 * pulse) * 2; // world diameter
+      this.grabGlow.width = r;
+      this.grabGlow.height = r;
+    }
   }
 
   destroy(arena: Arena) {
