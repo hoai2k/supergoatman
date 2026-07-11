@@ -26,13 +26,17 @@ export class VolcanoBoard extends Board {
     this.addBackdrop("volcano");
     this.root.addChild(this.lavaOverlay);
 
-    // colliders matched to the painted rock pillars (arena-art px coords)
-    this.solidPxRect(arena, 0, 528, 385, 800); // left shelf
-    this.solidPxRect(arena, 600, 487, 1035, 800); // centre pillar
-    this.solidPxRect(arena, 1285, 522, 1672, 800); // right shelf
+    // surveyed layout (?edit=bb export 2026-07-11)
+    this.solidPxRect(arena, 1, 536, 386, 808); // left shelf
+    this.solidPxRect(arena, 622, 494, 1024, 807); // centre pillar
+    this.solidPxRect(arena, 1287, 535, 1674, 813); // right shelf
     // floating stones hover over the lava gaps — leap up through them
-    this.solidPxRect(arena, 452, 578, 568, 620, { oneWay: true }); // floating stone L
-    this.solidPxRect(arena, 1080, 573, 1198, 615, { oneWay: true }); // floating stone R
+    this.solidPxRect(arena, 455, 587, 571, 629, { oneWay: true }); // floating stone L
+    this.solidPxRect(arena, 1083, 584, 1201, 626, { oneWay: true }); // floating stone R
+    // upper tier: obsidian decks rendered in the board's own colours
+    this.solidPxRect(arena, 1153, 431, 1329, 479, { oneWay: true, visible: true });
+    this.solidPxRect(arena, 328, 419, 530, 468, { oneWay: true, visible: true });
+    this.solidPxRect(arena, 737, 364, 907, 413, { oneWay: true, visible: true });
 
     // walls + ceiling so nobody leaves the painting
     this.addArenaShell(arena);

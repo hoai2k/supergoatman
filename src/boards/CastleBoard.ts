@@ -18,17 +18,9 @@ export class CastleBoard extends Board {
     this.addBackdrop("castle");
     this.addArenaShell(arena);
 
-    // the big blue mattress — a trampoline the size of a zip code
-    this.solidPxRect(arena, 340, 628, 1330, 800, { restitution: 0.82, bouncy: true, friction: 0.7 });
-    // pink front rim, slightly lower, also bouncy — full width so no goat
-    // can wedge itself into a crack beside the walls
-    this.solidPxRect(arena, 0, 745, 1672, 850, { restitution: 0.6, bouncy: true });
-    // raised side ledges (where the spikes live)
-    this.solidPxRect(arena, 0, 598, 330, 745, { restitution: 0.35, bouncy: true });
-    this.solidPxRect(arena, 1340, 598, 1672, 745, { restitution: 0.35, bouncy: true });
-    // inflatable towers as soft walls
-    this.solidPxRect(arena, 160, 260, 340, 600, { restitution: 0.55, bouncy: true });
-    this.solidPxRect(arena, 1330, 260, 1510, 600, { restitution: 0.55, bouncy: true });
+    // surveyed layout (?edit=bb export 2026-07-11): one wall-to-wall
+    // mattress — the entire floor is a trampoline, nowhere to hide
+    this.solidPxRect(arena, 0, 652, 1672, 850, { restitution: 0.82, bouncy: true, friction: 0.7 });
 
     // painted silver spike beds on the ledges
     this.addKillZonePx(0, 570, 195, 700, { labels: ["DEFLATED", "POPPED", "DEPOSIT LOST"], fx: "star", sfx: "pop" });

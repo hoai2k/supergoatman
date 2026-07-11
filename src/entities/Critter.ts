@@ -245,11 +245,13 @@ export class DynamicCritter {
     this.home = { x, y };
     const tex = animalTexture(name);
     const w = (tex.frame.width / tex.frame.height) * heightU;
+    // no CCD: tiny fast balls + continuous sweeps is Rapier panic bingo
+    // (the shrimp leaps triggered rare 'unreachable' aborts) — at their
+    // capped speed they can't tunnel through anything on these boards
     const desc = RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(x, y)
       .setLinearDamping(brain === "hopper" ? 0.4 : 0.8)
-      .setAngularDamping(2.2)
-      .setCcdEnabled(true);
+      .setAngularDamping(2.2);
     this.body = arena.physics.world.createRigidBody(desc);
     const col = RAPIER.ColliderDesc.ball(heightU * 0.34)
       .setDensity(0.5)
@@ -326,6 +328,13 @@ export class DynamicCritter {
       // stay upright-ish
       const rot = this.body.rotation();
       this.body.applyTorqueImpulse(-rot * 0.004 - this.body.angvel() * 0.001, true);
+    }
+
+    // speed cap (also what makes skipping CCD safe: ≤0.1u per substep)
+    const sp = Math.hypot(v.x, v.y);
+    if (sp > 12) {
+      const k = 12 / sp;
+      this.body.setLinvel(new RAPIER.Vector2(v.x * k, v.y * k), false);
     }
 
     // fell out of the world: trot back home

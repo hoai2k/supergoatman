@@ -28,19 +28,21 @@ export class GeometryBoard extends Board {
     this.addBackdrop("geometry");
     this.addArenaShell(arena);
 
-    // neon slabs matched to the painting — every one hovers, every one is a
-    // brawler platform: leap up through, land on top
-    this.solidPxRect(arena, 420, 638, 1260, 682, { oneWay: true }); // central platform
-    this.solidPxRect(arena, 690, 308, 985, 352, { oneWay: true }); // floating hex
+    // surveyed layout (?edit=bb export 2026-07-11) — every slab hovers,
+    // every slab is a brawler platform: leap up through, land on top
+    this.solidPxRect(arena, 423, 649, 1263, 693, { oneWay: true }); // central platform
+    this.solidPxRect(arena, 690, 318, 985, 362, { oneWay: true }); // floating hex
     this.solidPxRect(arena, 170, 595, 420, 639, { oneWay: true }); // left steps
-    this.solidPxRect(arena, 350, 515, 545, 559, { oneWay: true });
-    this.solidPxRect(arena, 245, 478, 345, 532, { oneWay: true });
-    this.solidPxRect(arena, 1175, 512, 1390, 556, { oneWay: true }); // right steps
-    this.solidPxRect(arena, 1290, 588, 1500, 632, { oneWay: true });
-    this.solidPxRect(arena, 0, 650, 265, 694, { oneWay: true }); // low outer benches
-    this.solidPxRect(arena, 1400, 645, 1672, 689, { oneWay: true });
+    this.solidPxRect(arena, 382, 518, 541, 560, { oneWay: true });
+    this.solidPxRect(arena, 251, 478, 422, 502, { oneWay: true });
+    this.solidPxRect(arena, 1176, 520, 1334, 554, { oneWay: true }); // right steps
+    this.solidPxRect(arena, 1294, 591, 1505, 635, { oneWay: true });
+    this.solidPxRect(arena, 0, 671, 265, 714, { oneWay: true }); // low outer benches
+    this.solidPxRect(arena, 1413, 671, 1685, 715, { oneWay: true });
     // grid floor at the bottom so the void doesn't eat everyone instantly
-    this.solidRect(arena, this.bounds.minX, 5.9, this.bounds.maxX, 6.75);
+    this.solidPxRect(arena, 0, 882, 1672, 941);
+    // little right-side hop pad
+    this.solidPxRect(arena, 1345, 473, 1441, 501, { oneWay: true });
 
     // the giant painted gear-saws
     this.addKillZonePx(0, 60, 250, 620, { labels: ["GEARED", "SAWN", "TESSELLATED"], fx: "star", sfx: "pop" });

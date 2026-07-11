@@ -91,7 +91,9 @@ export class MatchScreen implements Screen {
       if (this.consumeBack()) {
         this.game.audio.play("release");
         this.game.audio.setMusic(false);
-        this.game.toTitle();
+        // surveyors return to the arena shelf, brawlers to the title
+        if (this.game.editMode) this.game.toBoardSelect();
+        else this.game.toTitle();
       }
       return;
     }
@@ -129,15 +131,26 @@ export class MatchScreen implements Screen {
   }
 
   private consumeStart(): boolean {
-    for (const s of this.activeSources()) if (this.game.input.nav(s).start) return true;
+    for (const s of this.navSources()) if (this.game.input.nav(s).start) return true;
     return false;
   }
   private consumeBack(): boolean {
-    for (const s of this.activeSources()) if (this.game.input.nav(s).back) return true;
+    for (const s of this.navSources()) if (this.game.input.nav(s).back) return true;
     return false;
   }
   private activeSources() {
     return this.game.session.slots.filter((sl) => sl.active && !sl.isCPU && sl.source).map((sl) => sl.source!);
+  }
+  /** Edit mode has no claimed slots — any keyboard or pad may pause/exit. */
+  private navSources() {
+    const active = this.activeSources();
+    return active.length === 0 && this.game.editMode ? this.game.availableSources() : active;
+  }
+
+  private pauseHint() {
+    return this.game.editMode
+      ? "Start / Enter: resume      Ⓑ / Esc: back to arena select"
+      : "Start: resume      Ⓑ / Esc: quit to menu";
   }
 
   private buildPause() {
@@ -146,7 +159,7 @@ export class MatchScreen implements Screen {
     dim.label = "dim";
     const t = mkText("PAUSED", { size: 80, weight: "900", fill: COL.cream, stroke: COL.ink, strokeW: 12 });
     t.position.set(this.game.vw / 2, this.game.vh * 0.42);
-    const h = mkText("Start: resume      Ⓑ / Esc: quit to menu", { size: 26, weight: "800", fill: COL.dim });
+    const h = mkText(this.pauseHint(), { size: 26, weight: "800", fill: COL.dim });
     h.position.set(this.game.vw / 2, this.game.vh * 0.42 + 70);
     this.pauseOverlay.addChild(dim, t, h);
   }
@@ -160,7 +173,7 @@ export class MatchScreen implements Screen {
     dim.rect(0, 0, w, h).fill({ color: 0x000000, alpha: 0.6 });
     const t = mkText("PAUSED", { size: 80, weight: "900", fill: COL.cream, stroke: COL.ink, strokeW: 12 });
     t.position.set(w / 2, h * 0.42);
-    const hint = mkText("Start: resume      Ⓑ / Esc: quit to menu", { size: 26, weight: "800", fill: COL.dim });
+    const hint = mkText(this.pauseHint(), { size: 26, weight: "800", fill: COL.dim });
     hint.position.set(w / 2, h * 0.42 + 70);
     this.pauseOverlay.addChild(dim, t, hint);
   }

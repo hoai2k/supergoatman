@@ -352,6 +352,16 @@ export class Goat {
         this.releaseGrab(arena);
         return;
       }
+      // over-stretched joint = the solver is fighting a losing battle
+      // (grabbing a leaping shrimp, say) — let go before physics detonates
+      if (t.kind !== "wall") {
+        const hand = this.localToWorld(HAND_LOCAL);
+        const tp = t.body.translation();
+        if (Math.hypot(tp.x - hand.x, tp.y - hand.y) > 2.2) {
+          this.releaseGrab(arena);
+          return;
+        }
+      }
       // holding a goat by the scruff and wrenching it all the way around
       if (victim && t.neckHold) {
         const rel = angleDelta(this.angle, victim.angle);

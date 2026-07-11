@@ -378,6 +378,12 @@ export abstract class Board {
         arena.killGoat(goat, pick(["LOST", "OUT OF BOUNDS", "GONE SPELUNKING"]));
         continue;
       }
+      // ...and nobody gets to orbit the map after a physics tantrum — a
+      // degenerate joint can catapult a body out in a single solver step
+      if (p.y < this.bounds.minY - 16 || p.x < this.bounds.minX - 16 || p.x > this.bounds.maxX + 16) {
+        arena.killGoat(goat, pick(["LEFT ORBIT", "ESCAPED THE MAP", "YEETED INTO SPACE"]));
+        continue;
+      }
       const r = goat.radius * 0.55; // forgiving: need real contact, not a graze
       for (const z of this.hazardZones) {
         if (p.x + r > z.minX && p.x - r < z.maxX && p.y + r > z.minY && p.y - r < z.maxY) {

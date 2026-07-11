@@ -35,15 +35,19 @@ export class DungeonBoard extends Board {
     this.addArenaShell(arena);
     this.root.addChild(this.layer);
 
-    // stonework matched to the painting
+    // surveyed layout (?edit=bb export 2026-07-11)
     this.solidPxRect(arena, 285, 712, 1385, 830); // main hall floor
     // the raised ledges hover over the hall — jump up through them
-    this.solidPxRect(arena, 225, 545, 510, 589, { oneWay: true }); // left ledge
-    this.solidPxRect(arena, 1165, 540, 1450, 584, { oneWay: true }); // right ledge
-    this.solidPxRect(arena, 0, 60, 90, 941); // outer walls
-    this.solidPxRect(arena, 1580, 60, 1672, 941);
+    this.solidPxRect(arena, 226, 550, 490, 595, { oneWay: true }); // left ledge
+    this.solidPxRect(arena, 1177, 547, 1450, 591, { oneWay: true }); // right ledge
+    this.solidPxRect(arena, 0, 60, 50, 941); // outer walls
+    this.solidPxRect(arena, 1625, 60, 1672, 941);
     // pit floors beneath the spikes (so the corpses have somewhere to land)
-    this.solidRect(arena, this.bounds.minX, 6.1, this.bounds.maxX, 6.75);
+    this.solidPxRect(arena, 0, 896, 1672, 941);
+    // mid-hall stone decks, rendered in the dungeon's own colours
+    this.solidPxRect(arena, 726, 597, 949, 646, { oneWay: true, visible: true });
+    this.solidPxRect(arena, 568, 519, 718, 568, { oneWay: true, visible: true });
+    this.solidPxRect(arena, 973, 518, 1120, 567, { oneWay: true, visible: true });
 
     // painted spike pits flanking the hall
     this.addKillZonePx(30, 680, 285, 890, { labels: ["IMPALED", "DUNGEON'D", "POKED HOLES"], fx: "ember", sfx: "thud" });

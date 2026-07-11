@@ -28,16 +28,16 @@ export class TidepoolsBoard extends Board {
     this.addArenaShell(arena);
     this.root.addChild(this.layer);
 
-    // rocks matched to the painting (hovering ones are jump-through decks)
-    this.solidPxRect(arena, 480, 655, 1190, 810); // central slab
-    this.solidPxRect(arena, 240, 583, 500, 627, { oneWay: true }); // left stepping stone
-    this.solidPxRect(arena, 1195, 568, 1450, 612, { oneWay: true }); // right stepping stone
-    this.solidPxRect(arena, 0, 100, 215, 941); // left cliff
-    this.solidPxRect(arena, 1455, 130, 1672, 941); // right cliff
-    this.solidPxRect(arena, 215, 428, 500, 472, { oneWay: true }); // upper-left shelf
-    this.solidPxRect(arena, 1180, 452, 1490, 496, { oneWay: true }); // upper-right shelf
+    // surveyed layout (?edit=bb export 2026-07-11): slim cliff walls, no
+    // central slab — two tiers of jump-through decks over one big pool
+    this.solidPxRect(arena, 245, 558, 505, 599, { oneWay: true }); // left stepping stone
+    this.solidPxRect(arena, 1172, 547, 1427, 591, { oneWay: true }); // right stepping stone
+    this.solidPxRect(arena, 0, 100, 54, 941); // left cliff
+    this.solidPxRect(arena, 1624, 127, 1841, 938); // right cliff
+    this.solidPxRect(arena, 226, 704, 557, 748, { oneWay: true }); // low deck L
+    this.solidPxRect(arena, 1108, 707, 1441, 751, { oneWay: true }); // low deck R
     // pool floor — the tide pools are shallow; you wade, you don't drown
-    this.solidRect(arena, this.bounds.minX, 5.6, this.bounds.maxX, 6.75);
+    this.solidPxRect(arena, 8, 814, 1680, 1011);
 
     // urchin-crusted cliff faces (painted) are lethal to the touch
     this.addKillZonePx(200, 130, 300, 620, { labels: ["URCHIN'D", "WALL OF NOPE", "ACUPUNCTURE"], fx: "bubble", sfx: "splash" });

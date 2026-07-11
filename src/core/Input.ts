@@ -148,7 +148,7 @@ export class InputHub {
       const j = (codes: string[]) => codes.some((c) => this.keyJust.has(c));
       return {
         confirm: j(s.kick) || j(s.start),
-        back: false,
+        back: this.keyJust.has("Escape"),
         start: j(s.start),
         left: j(s.left),
         right: j(s.right),

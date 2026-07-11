@@ -25,20 +25,19 @@ export class FarmBoard extends Board {
     this.addArenaShell(arena);
     this.root.addChild(this.layer);
 
+    // surveyed layout (?edit=bb export 2026-07-11)
     // the paddock
-    this.solidPxRect(arena, 150, 700, 1520, 850);
-    // centre table (jump up through the top, brawl underneath it)
-    this.solidPxRect(arena, 600, 493, 1075, 537, { oneWay: true });
-    this.solidPxRect(arena, 640, 560, 700, 700); // legs
-    this.solidPxRect(arena, 950, 560, 1010, 700);
+    this.solidPxRect(arena, 150, 720, 1520, 850);
+    // centre table — a pure floating deck now, brawl right underneath it
+    this.solidPxRect(arena, 600, 501, 1075, 532, { oneWay: true });
     // floating plank
-    this.solidPxRect(arena, 688, 352, 977, 402, { oneWay: true });
+    this.solidPxRect(arena, 688, 358, 977, 394, { oneWay: true });
     // benches (tops only)
-    this.solidPxRect(arena, 315, 588, 555, 640, { oneWay: true });
-    this.solidPxRect(arena, 1105, 583, 1345, 635, { oneWay: true });
+    this.solidPxRect(arena, 315, 588, 548, 619, { oneWay: true });
+    this.solidPxRect(arena, 1114, 583, 1345, 617, { oneWay: true });
     // rusty machinery blocks the edges
-    this.solidPxRect(arena, 0, 520, 215, 941);
-    this.solidPxRect(arena, 1375, 560, 1672, 941);
+    this.solidPxRect(arena, -14, 587, 201, 1008);
+    this.solidPxRect(arena, 1356, 619, 1653, 1000);
 
     // ...and shreds whatever touches it
     this.addKillZonePx(30, 500, 300, 800, { labels: ["THRESHED", "BALED", "TETANUS"], fx: "star", sfx: "thud" });

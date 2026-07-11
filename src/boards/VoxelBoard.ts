@@ -33,18 +33,22 @@ export class VoxelBoard extends Board {
     this.addArenaShell(arena);
     this.root.addChild(this.layer);
 
-    // island matched to the painting
-    this.solidPxRect(arena, 300, 655, 1390, 810); // main deck
-    this.solidPxRect(arena, 630, 595, 1050, 660); // hill tiers
-    this.solidPxRect(arena, 680, 545, 1000, 600);
-    this.solidPxRect(arena, 730, 500, 930, 550);
+    // surveyed layout (?edit=bb export 2026-07-11)
+    this.solidPxRect(arena, 245, 672, 1426, 827); // main deck
     // floating pads — jump up through them, land on top
-    this.solidPxRect(arena, 500, 445, 640, 490, { oneWay: true });
-    this.solidPxRect(arena, 1035, 440, 1175, 485, { oneWay: true });
-    this.solidPxRect(arena, 795, 352, 875, 398, { oneWay: true });
+    this.solidPxRect(arena, 500, 445, 640, 481, { oneWay: true });
+    this.solidPxRect(arena, 1035, 440, 1175, 481, { oneWay: true });
+    this.solidPxRect(arena, 803, 352, 875, 398, { oneWay: true });
     // obsidian bowls at the edges
-    this.solidPxRect(arena, 0, 630, 130, 941);
-    this.solidPxRect(arena, 1580, 630, 1672, 941);
+    this.solidPxRect(arena, 0, 660, 123, 941);
+    this.solidPxRect(arena, 1558, 664, 1650, 975);
+    // hill tiers are jump-through decks now — pop up through the summit
+    this.solidPxRect(arena, 638, 580, 1038, 666, { oneWay: true });
+    this.solidPxRect(arena, 693, 545, 979, 590, { oneWay: true });
+    this.solidPxRect(arena, 736, 503, 938, 543, { oneWay: true });
+    // high side perches
+    this.solidPxRect(arena, 168, 386, 343, 508, { oneWay: true });
+    this.solidPxRect(arena, 1337, 378, 1478, 517, { oneWay: true });
 
     // painted lava pools
     this.addKillZonePx(55, 690, 300, 850, { labels: ["GRIEFED", "SMELTED", "RESPAWN SET"], fx: "ember", sfx: "sizzle" });

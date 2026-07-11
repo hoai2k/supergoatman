@@ -37,9 +37,16 @@ export class BridgeBoard extends Board {
     ]);
     this.addBackdrop("bridge");
 
-    // cliffs matched to the painting (arena-art px coords)
-    this.solidPxRect(arena, 0, 428, 295, 941); // left cliff
-    this.solidPxRect(arena, 1362, 432, 1672, 941); // right cliff
+    // surveyed layout (?edit=bb export 2026-07-11): the gorge faces are
+    // sculpted into stepped blocks now — grab-and-kick your way back up
+    this.solidPxRect(arena, 0, 428, 249, 941); // left cliff
+    this.solidPxRect(arena, 1403, 432, 1713, 941); // right cliff
+    this.solidPxRect(arena, 244, 429, 317, 491); // cliff lips
+    this.solidPxRect(arena, 1361, 438, 1419, 522);
+    this.solidPxRect(arena, 241, 761, 298, 887); // lower footholds
+    this.solidPxRect(arena, 1382, 740, 1425, 937);
+    this.solidPxRect(arena, 224, 499, 274, 673); // mid footholds
+    this.solidPxRect(arena, 1388, 542, 1432, 726);
 
     // walls + ceiling
     this.addArenaShell(arena);

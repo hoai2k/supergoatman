@@ -25,16 +25,20 @@ export class TundraBoard extends Board {
     this.addArenaShell(arena);
     this.root.addChild(this.layer);
 
+    // surveyed layout (?edit=bb export 2026-07-11)
     // the rink: enormous and utterly frictionless
-    this.solidPxRect(arena, 110, 690, 1560, 850, { friction: 0.01, icy: true });
-    // raised ice blocks (also slick)
-    this.solidPxRect(arena, 455, 578, 700, 690, { friction: 0.04, icy: true });
-    this.solidPxRect(arena, 975, 570, 1215, 690, { friction: 0.04, icy: true });
+    this.solidPxRect(arena, 110, 716, 1560, 850, { friction: 0.01, icy: true });
     // floating berg — leap up through it from the rink
     this.solidPxRect(arena, 695, 428, 955, 490, { friction: 0.08, icy: true, oneWay: true });
     // glacier cliffs
-    this.solidPxRect(arena, 0, 60, 210, 941);
-    this.solidPxRect(arena, 1460, 60, 1672, 941);
+    this.solidPxRect(arena, 0, 60, 125, 941);
+    this.solidPxRect(arena, 1551, 60, 1672, 941);
+    // raised ice shelves (slick, jump-through)
+    this.solidPxRect(arena, 462, 576, 707, 625, { friction: 0.04, icy: true, oneWay: true });
+    this.solidPxRect(arena, 977, 577, 1207, 626, { friction: 0.04, icy: true, oneWay: true });
+    // high glacier perches
+    this.solidPxRect(arena, 130, 147, 237, 285);
+    this.solidPxRect(arena, 1428, 164, 1562, 272);
 
     // painted ice-spike beds at the rink edges (deep enough to catch anyone
     // who slips into the gap between rink and glacier)
