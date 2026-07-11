@@ -68,6 +68,7 @@ export class Goat {
   private grabTarget: GrabTarget | null = null;
   private twistAccum = 0;
   private lastRelAngle = 0;
+  private iceBraking = false; // paws dragging on ice this step (no joint)
   // wall-scaling: a kick right after letting go fires at FULL strength, and
   // a short lockout stops the still-held grab from re-latching mid-launch
   private wallJumpT = 0;
@@ -181,7 +182,14 @@ export class Goat {
     if (this.alive) {
       this.applyRoll();
       this.updateGrab(arena);
-      if (this.pendingKick && this.kickCd <= 0) this.startKick(arena);
+      // double-jump rule: the moment the hitbox intersects a one-way deck a
+      // fresh kick is allowed — only the active kick phase gates, not the
+      // tail cooldown (otherwise the platform is behind you before the
+      // cooldown clears and the "second jump" never lands)
+      const canKick =
+        this.kickCd <= 0 ||
+        (this.kicking <= 0 && arena.physics.overlapsOneWay(this.pos, 0.6));
+      if (this.pendingKick && canKick) this.startKick(arena);
       if (this.pendingButt && this.buttCd <= 0) this.headbutt(arena);
     }
     this.pendingKick = false;
@@ -237,7 +245,7 @@ export class Goat {
     const head = this.headWorld();
     const dir = this.headDir();
     const grounded =
-      this.groundedDown() || this.feetGrounded() || arena.physics.overlapsOneWay(this.pos, 0.45);
+      this.groundedDown() || this.feetGrounded() || arena.physics.overlapsOneWay(this.pos, 0.6);
     const power = GOAT.buttImpulse * (grounded ? 1 : GOAT.buttAirScale);
     this.body.applyImpulse(scale(dir, power), true);
     arena.fx.burst("star", head, { n: 5 });
@@ -282,9 +290,10 @@ export class Goat {
     }
     const boost = this.wallJumpT > 0; // fresh off a hold: spring off the wall
     // passing through a one-way deck counts as footing: kick off it mid-air
-    // to boost yourself the rest of the way up onto the platform
+    // to boost yourself the rest of the way up onto the platform (0.6 pad =
+    // the hull's reach, so it arms as soon as the hitbox touches the deck)
     const grounded =
-      this.feetGrounded() || boost || arena.physics.overlapsOneWay(this.pos, 0.45);
+      this.feetGrounded() || boost || arena.physics.overlapsOneWay(this.pos, 0.6);
     const power =
       GOAT.kickImpulse * (boost ? GOAT.wallKickBoost : grounded ? 1 : GOAT.kickAirScale);
     this.body.applyImpulse(scale(this.headDir(), power), true);
@@ -376,6 +385,7 @@ export class Goat {
       }
       return;
     }
+    this.iceBraking = false;
     if (!wantGrab) return;
     if (this.grabLockT > 0) return; // just wall-jumped; hands busy
 
@@ -393,18 +403,25 @@ export class Goat {
       undefined,
       this.body,
     );
+    let icyDrag = false;
     if (proj) {
       const d = Math.hypot(proj.point.x - hand.x, proj.point.y - hand.y);
       if (d <= GOAT.grabReach) {
-        const parent = proj.collider.parent();
-        if (parent) {
-          best = {
-            body: parent,
-            point: { x: proj.point.x, y: proj.point.y },
-            kind: "wall",
-            d,
-            neckHold: false,
-          };
+        if (proj.collider.friction() < 0.15) {
+          // ice is too slick to hold — remember it, but let a nearby prop
+          // or rival outrank it (you can still grab THEM while on ice)
+          icyDrag = true;
+        } else {
+          const parent = proj.collider.parent();
+          if (parent) {
+            best = {
+              body: parent,
+              point: { x: proj.point.x, y: proj.point.y },
+              kind: "wall",
+              d,
+              neckHold: false,
+            };
+          }
         }
       }
     }
@@ -431,7 +448,15 @@ export class Goat {
       }
     }
 
-    if (best) this.makeGrab(arena, best);
+    if (best) {
+      this.makeGrab(arena, best);
+    } else if (icyDrag) {
+      // paws drag on the ice: stop much sooner than free-sliding, not instantly
+      this.iceBraking = true;
+      const lv = this.body.linvel();
+      this.body.setLinvel({ x: lv.x * 0.94, y: lv.y * 0.94 }, false);
+      this.body.setAngvel(this.body.angvel() * 0.95, false);
+    }
   }
 
   private makeGrab(
@@ -539,14 +564,15 @@ export class Goat {
     this.view.rotation = this.angle;
     this.sprite.alpha = this.invulnT > 0 ? 0.5 + 0.35 * Math.sin(this.invulnT * 26) : 1;
 
-    // hand glow: pulses while reaching, locks bright once latched on
+    // hand glow: pulses while reaching, locks bright once latched on,
+    // steady mid-glow while paws are dragging on ice
     const reaching = this.alive && this.intent.grab;
     const latched = this.grabJoint !== null;
     this.grabGlow.visible = reaching || latched;
     if (this.grabGlow.visible) {
       const pulse = Math.sin(this.glowPhase * 11);
-      this.grabGlow.alpha = latched ? 0.95 : 0.55 + 0.22 * pulse;
-      const r = (latched ? 0.34 : 0.28 + 0.03 * pulse) * 2; // world diameter
+      this.grabGlow.alpha = latched ? 0.95 : this.iceBraking ? 0.8 : 0.55 + 0.22 * pulse;
+      const r = (latched || this.iceBraking ? 0.34 : 0.28 + 0.03 * pulse) * 2; // world diameter
       this.grabGlow.width = r;
       this.grabGlow.height = r;
     }
