@@ -236,7 +236,8 @@ export class Goat {
     this.buttCd = GOAT.buttCooldown;
     const head = this.headWorld();
     const dir = this.headDir();
-    const grounded = this.groundedDown() || this.feetGrounded();
+    const grounded =
+      this.groundedDown() || this.feetGrounded() || arena.physics.overlapsOneWay(this.pos, 0.45);
     const power = GOAT.buttImpulse * (grounded ? 1 : GOAT.buttAirScale);
     this.body.applyImpulse(scale(dir, power), true);
     arena.fx.burst("star", head, { n: 5 });
@@ -280,7 +281,10 @@ export class Goat {
       this.grabLockT = 0.25;
     }
     const boost = this.wallJumpT > 0; // fresh off a hold: spring off the wall
-    const grounded = this.feetGrounded() || boost;
+    // passing through a one-way deck counts as footing: kick off it mid-air
+    // to boost yourself the rest of the way up onto the platform
+    const grounded =
+      this.feetGrounded() || boost || arena.physics.overlapsOneWay(this.pos, 0.45);
     const power =
       GOAT.kickImpulse * (boost ? GOAT.wallKickBoost : grounded ? 1 : GOAT.kickAirScale);
     this.body.applyImpulse(scale(this.headDir(), power), true);

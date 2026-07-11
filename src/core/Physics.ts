@@ -37,6 +37,31 @@ export class Physics {
     this.oneWayTop.set(collider.handle, collider.translation().y - cub.halfExtents.y); // y grows down
   }
 
+  /** Re-cache a one-way deck's top plane after its collider was edited. */
+  refreshOneWay(collider: RAPIER.Collider) {
+    if (!this.oneWay.has(collider.handle)) return;
+    const cub = collider.shape as RAPIER.Cuboid;
+    this.oneWayTop.set(collider.handle, collider.translation().y - cub.halfExtents.y);
+  }
+
+  /**
+   * Is this point within `pad` of any one-way deck's box? While passing
+   * through a deck a goat has phantom footing: a kick launches at full
+   * strength, so you can boost yourself up onto the platform mid-flight.
+   */
+  overlapsOneWay(p: Vec2, pad: number): boolean {
+    for (const h of this.oneWay) {
+      const c = this.world.getCollider(h);
+      if (!c) continue;
+      const cub = c.shape as RAPIER.Cuboid;
+      const t = c.translation();
+      if (Math.abs(p.x - t.x) < cub.halfExtents.x + pad && Math.abs(p.y - t.y) < cub.halfExtents.y + pad) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private hooks: RAPIER.PhysicsHooks = {
     filterContactPair: (c1, c2) => {
       let top = this.oneWayTop.get(c1);

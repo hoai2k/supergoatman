@@ -4,6 +4,7 @@ import type { Game } from "../core/Game";
 import { Match } from "../core/Match";
 import { boardById } from "../boards";
 import { DebugDraw } from "../render/DebugDraw";
+import { BoxEditor } from "../render/BoxEditor";
 import { HUD } from "./HUD";
 import { mkText, COL } from "./theme";
 import { easeOutBack } from "./theme";
@@ -20,6 +21,7 @@ export class MatchScreen implements Screen {
   private paused = false;
   private pendingResults = -2;
   private debugDraw: DebugDraw | null = null;
+  private boxEditor: BoxEditor | null = null;
 
   constructor(private game: Game) {
     const board = boardById(game.session.boardId);
@@ -32,9 +34,12 @@ export class MatchScreen implements Screen {
     (window as unknown as { __match: Match }).__match = this.match;
 
     // debug overlay: live collision shapes for EVERYTHING (?debug=bb or #dbgcol)
-    const wantDebug =
-      new URLSearchParams(location.search).get("debug") === "bb" || location.hash.includes("dbgcol");
+    const params = new URLSearchParams(location.search);
+    const wantEdit = params.get("edit") === "bb";
+    const wantDebug = params.get("debug") === "bb" || location.hash.includes("dbgcol") || wantEdit;
     if (wantDebug) this.debugDraw = new DebugDraw(this.match);
+    // ?edit=bb: drag platform boxes live, then export the tuned coords
+    if (wantEdit) this.boxEditor = new BoxEditor(this.match, game.session.boardId);
 
     this.banner.addChild(this.bannerText);
     this.container.addChild(this.hud.root, this.banner);
@@ -67,6 +72,8 @@ export class MatchScreen implements Screen {
   enter() {}
 
   exit() {
+    this.boxEditor?.destroy();
+    this.boxEditor = null;
     this.match.destroy();
   }
 
@@ -78,6 +85,8 @@ export class MatchScreen implements Screen {
       this.game.audio.play(this.paused ? "release" : "blip");
     }
     if (this.paused) {
+      // the platform editor stays live while paused — calmest way to edit
+      this.boxEditor?.update();
       if (this.consumeBack()) {
         this.game.audio.play("release");
         this.game.audio.setMusic(false);
@@ -88,6 +97,7 @@ export class MatchScreen implements Screen {
 
     this.match.update(dt);
     this.debugDraw?.update();
+    this.boxEditor?.update();
     this.hud.update(this.match);
     this.tickBanner(dt);
 

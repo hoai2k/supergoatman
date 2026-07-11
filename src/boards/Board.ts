@@ -27,6 +27,18 @@ export interface Solid {
   gfx: Container | null;
 }
 
+/** A live, editable axis-aligned solid (world coords; px derived on export). */
+export interface EditRect {
+  collider: RAPIER.Collider;
+  body: RigidBody;
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  oneWay: boolean;
+  shell: boolean; // arena walls/ceiling — not part of the board's platforms
+}
+
 export interface HazardZone {
   minX: number;
   minY: number;
@@ -54,6 +66,9 @@ export abstract class Board {
   hazardZones: HazardZone[] = [];
   /** Debug: collider rects drawn when #dbgcol is in the URL. */
   debugRects: { x: number; y: number; w: number; h: number; lethal: boolean }[] = [];
+  /** Every axis-aligned solid, in build order — the ?edit=bb editor's model. */
+  editRects: EditRect[] = [];
+  private buildingShell = false;
 
   abstract build(arena: Arena): void;
   // called once per rendered frame
@@ -129,7 +144,27 @@ export abstract class Board {
     const solid = { body, gfx: null };
     this.solids.push(solid);
     this.debugRects.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0, lethal: false });
+    this.editRects.push({
+      collider,
+      body,
+      x0,
+      y0,
+      x1,
+      y1,
+      oneWay: !!opts.oneWay,
+      shell: this.buildingShell,
+    });
     return solid;
+  }
+
+  /** Inverse of px(): world coords -> arena-art pixels (1672x941). */
+  pxOf(x: number, y: number): Vec2 {
+    const w = this.bounds.maxX - this.bounds.minX;
+    const h = this.bounds.maxY - this.bounds.minY;
+    return {
+      x: ((x - this.bounds.minX) / w) * 1672,
+      y: ((y - this.bounds.minY) / h) * 941,
+    };
   }
 
   /** Invisible static collider from arena-art pixel coords. */
@@ -197,9 +232,11 @@ export abstract class Board {
    * screen. Overlapping static boxes cost nothing.
    */
   protected addArenaShell(arena: Arena) {
+    this.buildingShell = true;
     this.solidRect(arena, this.bounds.minX - 1.2, this.bounds.minY - 2, this.bounds.minX + 0.05, this.bounds.maxY);
     this.solidRect(arena, this.bounds.maxX - 0.05, this.bounds.minY - 2, this.bounds.maxX + 1.2, this.bounds.maxY);
     this.solidRect(arena, this.bounds.minX - 1.2, this.bounds.minY - 1.4, this.bounds.maxX + 1.2, this.bounds.minY - 0.3);
+    this.buildingShell = false;
   }
 
   solidBox(
