@@ -42,7 +42,7 @@ export const GOAT = {
   maxSpin: 12.0, // rad/s
 
   // Grab: hands at the head end attach to whatever they touch.
-  grabReach: 0.5,
+  grabReach: 0.58,
   grabStiffness: 1.0,
 
   eyeBlinkEvery: 3.4,

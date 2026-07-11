@@ -283,17 +283,30 @@ export class Goat {
     let best: { body: RigidBody; point: Vec2; kind: string; d: number; neckHold: boolean } | null =
       null;
 
-    const dir = this.headDir();
-    const hit = arena.physics.castRay(
-      this.pos,
-      dir,
-      0.5 + GOAT.grabReach,
+    // Hands stick to the closest static surface in ANY direction — ledges,
+    // walls, the ground under your paws — like Super Bunny Man's grab.
+    const proj = this.world.projectPoint(
+      new RAPIER.Vector2(hand.x, hand.y),
+      true,
+      undefined,
       groups(0xffff, CG.TERRAIN),
+      undefined,
       this.body,
     );
-    if (hit) {
-      const parent = hit.collider.parent();
-      if (parent) best = { body: parent, point: hit.point, kind: "wall", d: hit.toi, neckHold: false };
+    if (proj) {
+      const d = Math.hypot(proj.point.x - hand.x, proj.point.y - hand.y);
+      if (d <= GOAT.grabReach) {
+        const parent = proj.collider.parent();
+        if (parent) {
+          best = {
+            body: parent,
+            point: { x: proj.point.x, y: proj.point.y },
+            kind: "wall",
+            d,
+            neckHold: false,
+          };
+        }
+      }
     }
 
     for (const prop of arena.props) {
@@ -345,6 +358,11 @@ export class Goat {
 
   releaseIfGrabbing(body: RigidBody, arena: Arena) {
     if (this.grabTarget && this.grabTarget.body === body) this.releaseGrab(arena);
+  }
+
+  /** The body this goat is currently holding, if any. */
+  grabbedBody(): RigidBody | null {
+    return this.grabTarget?.body ?? null;
   }
 
   private releaseGrab(arena: Arena) {

@@ -16,7 +16,7 @@ export class Camera {
   private targetCenter: Vec2 = { x: 0, y: 0 };
   private targetZoom = 0.7;
   minZoom = 0.42;
-  maxZoom = 1.5;
+  maxZoom = 2.7; // close-ups when the brawl bunches up
   bounds: CamBounds | null = null;
   /** If set, zoom never goes low enough to show outside this rect. */
   viewRect: CamBounds | null = null;
@@ -35,7 +35,7 @@ export class Camera {
     this.trauma = clamp(this.trauma + amount / 100, 0, 1);
   }
 
-  frame(points: Vec2[], padding = 3.2) {
+  frame(points: Vec2[], padding = 1.7) {
     if (points.length === 0) return;
     let minX = Infinity,
       minY = Infinity,
