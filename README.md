@@ -37,8 +37,15 @@ Each arena is a painted backdrop with physics colliders matched to the scenery, 
 deadly obstacles guarding the far left and right edges.
 
 - **Cloud Nine** — cloud platforms in a balloon festival. Grab balloons to ride the sky, kick them to pop. Ceremonial spears line the walls.
+- **Bounce Palace** — a bouncy castle where every surface is a trampoline. The silver spikes on the ledges are not.
 - **Wobble Gorge** — a springy plank bridge over a canyon. Stomp-kick planks to trampoline rivals; sharpened stakes wait on the cliff tops.
+- **Petting Zoo (Do Not Pet)** — bouncy sheep, a cow with right of way, a donkey that kicks back, and edge machinery that harvests goats.
+- **Pinch Point** — tide pools with eruptive shrimp, grudge-bearing crabs, and cliffs made entirely of urchins.
 - **The Deep End** — neutral-buoyancy reef swimming (each kick is a stroke) with scuba tanks. Urchin colonies own the walls.
+- **Black Ice** — a frictionless rink under the aurora. Steer by momentum, dodge the commuting moose, punt penguins like curling stones.
+- **Chunk Error** — a floating voxel island. Kick blocks twice to mine them; the edge lava pools are fully vanilla.
+- **Euclid's Revenge** — low-gravity neon geometry with a slowly spinning cube platform and two gear-saws off the safety register.
+- **The Goatacombs** — a dungeon hall with swinging grabbable chains, torchlight, and spike pits that don't take appointments.
 - **Cinder Cone** — basalt islands in a lava lake, bracketed by molten obsidian shards. Try not to become fondue.
 
 ## The goat

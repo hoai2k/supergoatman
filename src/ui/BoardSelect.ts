@@ -100,15 +100,23 @@ export class BoardSelectScreen implements Screen {
     this.updateInfo();
   }
 
+  private tileSpacing = 220;
+
   private layoutTiles() {
-    // handled in resize + here for the pop animation
+    // carousel: the selected tile sits centred; neighbours fan out and fade
     for (let i = 0; i < this.tiles.children.length; i++) {
       const tile = this.tiles.children[i] as Container;
-      const focused = i === this.idx;
-      const target = focused ? 1.14 : 0.82;
-      tile.scale.set(tile.scale.x + (target - tile.scale.x) * 0.2);
-      tile.alpha = tile.alpha + ((focused ? 1 : 0.5) - tile.alpha) * 0.2;
+      const rel = i - this.idx;
+      const targetX = rel * this.tileSpacing;
+      tile.position.x += (targetX - tile.position.x) * 0.22;
+      tile.visible = Math.abs(rel) < 2.75;
+      const focused = rel === 0;
+      const targetS = focused ? 1.14 : Math.max(0.66, 0.92 - Math.abs(rel) * 0.13);
+      tile.scale.set(tile.scale.x + (targetS - tile.scale.x) * 0.2);
+      tile.alpha = tile.alpha + ((focused ? 1 : 0.45) - tile.alpha) * 0.2;
+      tile.zIndex = 100 - Math.abs(rel);
     }
+    this.tiles.sortChildren();
   }
 
   private updateInfo() {
@@ -131,9 +139,8 @@ export class BoardSelectScreen implements Screen {
     this.header.position.set(w / 2, h * 0.12);
 
     this.tiles.removeChildren();
-    const tileW = Math.min(190, (w - 120) / 4 - 20);
-    const gap = 26;
-    const total = this.meta.length * tileW + (this.meta.length - 1) * gap;
+    const tileW = Math.min(210, w * 0.18);
+    this.tileSpacing = tileW + 30;
     for (let i = 0; i < this.meta.length; i++) {
       const m = this.meta[i];
       const tile = new Container();
@@ -142,10 +149,10 @@ export class BoardSelectScreen implements Screen {
       p.roundRect(-tileW / 2, -tileW / 2, tileW, tileW, 20).stroke({ color: m.accent, width: 4 });
       const thumb = boardThumb(m.id, tileW - 10, tileW * 0.62);
       thumb.position.set(0, -tileW * 0.1);
-      const label = mkText(m.name, { size: 17, weight: "800", fill: COL.cream });
+      const label = mkText(m.name, { size: 16, weight: "800", fill: COL.cream });
       label.position.set(0, tileW / 2 - 22);
       tile.addChild(p, thumb, label);
-      tile.position.set(-total / 2 + tileW / 2 + i * (tileW + gap), 0);
+      tile.position.set((i - this.idx) * this.tileSpacing, 0);
       this.tiles.addChild(tile);
     }
     this.tiles.position.set(w / 2, h * 0.34);

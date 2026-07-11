@@ -102,15 +102,24 @@ export abstract class Board {
 
   // ---- terrain helpers ---------------------------------------------------
   /** Invisible static collider matched to painted scenery. */
-  solidRect(arena: Arena, x0: number, y0: number, x1: number, y1: number): Solid {
+  solidRect(
+    arena: Arena,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    opts: { friction?: number; restitution?: number; icy?: boolean; bouncy?: boolean } = {},
+  ): Solid {
     const cx = (x0 + x1) / 2;
     const cy = (y0 + y1) / 2;
     const desc = RAPIER.RigidBodyDesc.fixed().setTranslation(cx, cy);
     const body = arena.physics.world.createRigidBody(desc);
     const col = RAPIER.ColliderDesc.cuboid((x1 - x0) / 2, (y1 - y0) / 2)
-      .setFriction(0.95)
-      .setRestitution(0.0)
+      .setFriction(opts.friction ?? 0.95)
+      .setRestitution(opts.restitution ?? 0.0)
       .setCollisionGroups(groups(CG.TERRAIN, CG.GOAT | CG.PROP));
+    if (opts.icy) col.setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min);
+    if (opts.bouncy) col.setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Max);
     arena.physics.world.createCollider(col, body);
     const solid = { body, gfx: null };
     this.solids.push(solid);
@@ -119,10 +128,66 @@ export abstract class Board {
   }
 
   /** Invisible static collider from arena-art pixel coords. */
-  solidPxRect(arena: Arena, px0: number, py0: number, px1: number, py1: number): Solid {
+  solidPxRect(
+    arena: Arena,
+    px0: number,
+    py0: number,
+    px1: number,
+    py1: number,
+    opts: { friction?: number; restitution?: number; icy?: boolean; bouncy?: boolean } = {},
+  ): Solid {
     const a = this.px(px0, py0);
     const b = this.px(px1, py1);
-    return this.solidRect(arena, a.x, a.y, b.x, b.y);
+    return this.solidRect(arena, a.x, a.y, b.x, b.y, opts);
+  }
+
+  /** Lethal zone over a hazard that is already painted into the backdrop. */
+  protected addKillZone(
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    opts: { labels?: string[]; fx?: string; sfx?: string } = {},
+  ) {
+    this.hazardZones.push({
+      minX: x0,
+      minY: y0,
+      maxX: x1,
+      maxY: y1,
+      label: opts.labels ?? ["SKEWERED", "POKED", "PERFORATED"],
+      fx: opts.fx ?? "impact",
+      sfx: opts.sfx ?? "thud",
+    });
+    this.debugRects.push({ x: x0, y: y0, w: x1 - x0, h: y1 - y0, lethal: true });
+  }
+
+  /** addKillZone in arena-art pixel coords. */
+  protected addKillZonePx(
+    px0: number,
+    py0: number,
+    px1: number,
+    py1: number,
+    opts: { labels?: string[]; fx?: string; sfx?: string } = {},
+  ) {
+    const a = this.px(px0, py0);
+    const b = this.px(px1, py1);
+    this.addKillZone(a.x, a.y, b.x, b.y, opts);
+  }
+
+  /** Sudden death: hazard zones slowly creep toward the centre. */
+  protected creepZones(dt: number, rate = 0.09) {
+    for (const z of this.hazardZones) {
+      const cx = (z.minX + z.maxX) / 2;
+      if (cx < 0) z.maxX = Math.min(z.maxX + dt * rate, this.bounds.maxX - 2);
+      else z.minX = Math.max(z.minX - dt * rate, this.bounds.minX + 2);
+    }
+  }
+
+  /** Standard invisible walls + ceiling so nobody leaves the painting. */
+  protected addArenaShell(arena: Arena) {
+    this.solidRect(arena, this.bounds.minX - 1.2, this.bounds.minY - 2, this.bounds.minX - 0.1, this.bounds.maxY);
+    this.solidRect(arena, this.bounds.maxX + 0.1, this.bounds.minY - 2, this.bounds.maxX + 1.2, this.bounds.maxY);
+    this.solidRect(arena, this.bounds.minX, this.bounds.minY - 1.4, this.bounds.maxX, this.bounds.minY - 0.3);
   }
 
   solidBox(

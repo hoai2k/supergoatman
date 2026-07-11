@@ -13,7 +13,38 @@ const URLS = {
   arena_volcano: new URL("../../assets/arenas/volcano.png", import.meta.url).href,
   arena_underwater: new URL("../../assets/arenas/reef.png", import.meta.url).href,
   arena_bridge: new URL("../../assets/arenas/bridge.png", import.meta.url).href,
+  arena_castle: new URL("../../assets/arenas/castle.png", import.meta.url).href,
+  arena_tidepools: new URL("../../assets/arenas/tidepools.png", import.meta.url).href,
+  arena_tundra: new URL("../../assets/arenas/tundra.png", import.meta.url).href,
+  arena_farm: new URL("../../assets/arenas/farm.png", import.meta.url).href,
+  arena_geometry: new URL("../../assets/arenas/geometry.png", import.meta.url).href,
+  arena_voxel: new URL("../../assets/arenas/voxel.png", import.meta.url).href,
+  arena_dungeon: new URL("../../assets/arenas/dungeon.png", import.meta.url).href,
+  animals: new URL("../../assets/animal-atlas.png", import.meta.url).href,
 };
+
+// measured content rects in animal-atlas.png (4px padding)
+const ANIMAL_RECTS: Record<string, [number, number, number, number]> = {
+  shrimp: [92, 125, 248, 322],
+  crab: [414, 251, 314, 211],
+  moose: [763, 79, 351, 383],
+  penguin: [1212, 168, 221, 293],
+  sheep: [71, 609, 299, 271],
+  cow: [413, 569, 374, 316],
+  donkey: [806, 519, 326, 366],
+};
+
+const animalCache = new Map<string, Texture>();
+
+export function animalTexture(name: keyof typeof ANIMAL_RECTS | string): Texture {
+  let t = animalCache.get(name as string);
+  if (!t) {
+    const [x, y, w, h] = ANIMAL_RECTS[name as string];
+    t = new Texture({ source: tex("animals").source, frame: new Rectangle(x, y, w, h) });
+    animalCache.set(name as string, t);
+  }
+  return t;
+}
 
 const loaded = new Map<string, Texture>();
 
