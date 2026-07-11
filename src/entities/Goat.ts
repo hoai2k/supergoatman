@@ -453,10 +453,12 @@ export class Goat {
     return this.rayHit({ x: 0, y: 1 }, BODY_RADIUS + 0.16);
   }
   private feetGrounded(): boolean {
+    // decoupled from the (now short) hit sweep: launch off anything within
+    // half a unit of the hooves, same as before the range fix
     const feet = this.localToWorld(FEET_LOCAL);
     const dir = scale(this.headDir(), -1);
     const ray = new RAPIER.Ray(new RAPIER.Vector2(feet.x, feet.y), new RAPIER.Vector2(dir.x, dir.y));
-    return !!this.world.castRay(ray, GOAT.kickReach * 0.7, true, undefined, groups(0xffff, CG.TERRAIN | CG.PROP), undefined, this.body);
+    return !!this.world.castRay(ray, 0.5, true, undefined, groups(0xffff, CG.TERRAIN | CG.PROP), undefined, this.body);
   }
   private rayHit(dir: Vec2, dist: number): boolean {
     const ray = new RAPIER.Ray(new RAPIER.Vector2(this.pos.x, this.pos.y), new RAPIER.Vector2(dir.x, dir.y));

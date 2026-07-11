@@ -29,8 +29,11 @@ export const GOAT = {
   kickImpulse: 2.9, // self launch impulse (grounded) — a hop, not a rocket
   kickAirScale: 0.45, // fraction of launch impulse when feet aren't near a surface
   kickSpin: 0.02, // small angular kick for style
-  kickReach: 0.72, // how far the legs sweep from the feet end
-  kickWidth: 0.34,
+  // Hit envelope matched to the ART: the drawn leg tip reaches ~0.23 beyond
+  // the hooves, so the sweep is short and thin — you hit when the legs
+  // actually touch them, not from a body-length away.
+  kickReach: 0.36, // leg sweep length beyond the feet point
+  kickWidth: 0.14, // leg thickness
   kickKnockback: 1.7, // impulse imparted to victims — a shove, not a cannon
   kickUpBias: 0.24, // victims get lofted a bit (juicier)
   kickActiveTime: 0.16, // seconds the leg is "out" and can hit
