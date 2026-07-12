@@ -22,7 +22,7 @@ class LivesCard {
     this.goat.position.set(30, 32);
     const label = mkText(name, { size: 18, weight: "900", fill: color, anchorX: 0, anchorY: 0.5 });
     label.position.set(62, 17);
-    this.livesText = mkText("♥ ×9", { size: 20, weight: "900", fill: 0xffffff, anchorX: 0, anchorY: 0.5 });
+    this.livesText = mkText("♥ ×5", { size: 20, weight: "900", fill: 0xffffff, anchorX: 0, anchorY: 0.5 });
     this.livesText.position.set(62, 40);
     this.root.addChild(this.frame, this.goat, label, this.livesText);
   }

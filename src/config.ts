@@ -48,7 +48,7 @@ export const GOAT = {
   buttRadius: 0.36, // hit range around the head
   buttCooldown: 0.55,
 
-  // Precise mode (hold RT): slower, finer body rotation for lining up shots.
+  // Precise mode (RT toggles, Shift held on keyboard): slower, finer rotation.
   preciseTorque: 0.4, // multiplier on rollTorque
   preciseMaxSpin: 0.5, // multiplier on maxRollSpeed
   preciseBrake: 0.88, // per-step angular damping when the stick is released
@@ -112,7 +112,7 @@ export const PALETTES: Palette[] = [
 ];
 
 // ---- Match rules -------------------------------------------------------
-export const LIVES = 9; // cats wish they were goats
+export const LIVES = 5;
 
 export const MATCH = {
   roundIntroTime: 2.0,

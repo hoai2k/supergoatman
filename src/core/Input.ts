@@ -58,6 +58,7 @@ export class InputHub {
   private keyJustBuf = new Set<string>();
   private keyJust = new Set<string>();
   private pads: PadSnap[] = [];
+  private padSlowMode: boolean[] = []; // RT-toggled slow/subtle motion per pad
   private prevPadDown: boolean[][] = [];
 
   constructor() {
@@ -116,7 +117,9 @@ export class InputHub {
     const kick = !!p.down[0]; // A
     const grab = !!(p.down[2] || p.down[5] || p.down[4] || p.down[6]); // X / RB / LB / LT
     const butt = !!p.down[3]; // Y — headbutt
-    const precise = !!p.down[7]; // hold RT — slow, fine rotation
+    // RT toggles between fast (normal) and slow (subtle) motion modes
+    if (p.just[7]) this.padSlowMode[index] = !this.padSlowMode[index];
+    const precise = !!this.padSlowMode[index];
     return { roll, aimX: dz(p.axes[2] ?? 0), aimY: dz(p.axes[3] ?? 0), kick, grab, butt, precise };
   }
 
