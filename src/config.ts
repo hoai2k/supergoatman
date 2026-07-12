@@ -48,7 +48,7 @@ export const GOAT = {
   buttRadius: 0.36, // hit range around the head
   buttCooldown: 0.55,
 
-  // Precise mode (hold B): slower, finer body rotation for lining up shots.
+  // Precise mode (hold RT): slower, finer body rotation for lining up shots.
   preciseTorque: 0.4, // multiplier on rollTorque
   preciseMaxSpin: 0.5, // multiplier on maxRollSpeed
   preciseBrake: 0.88, // per-step angular damping when the stick is released

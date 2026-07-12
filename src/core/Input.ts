@@ -105,10 +105,10 @@ export class InputHub {
     let roll = lx;
     if (p.down[14]) roll = -1; // dpad left
     if (p.down[15]) roll = 1; // dpad right
-    const kick = !!(p.down[0] || p.down[7]); // A or RT
+    const kick = !!p.down[0]; // A
     const grab = !!(p.down[2] || p.down[5] || p.down[4] || p.down[6]); // X / RB / LB / LT
     const butt = !!p.down[3]; // Y — headbutt
-    const precise = !!p.down[1]; // B — slow, fine rotation
+    const precise = !!p.down[7]; // hold RT — slow, fine rotation
     return { roll, aimX: dz(p.axes[2] ?? 0), aimY: dz(p.axes[3] ?? 0), kick, grab, butt, precise };
   }
 
