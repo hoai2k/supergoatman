@@ -43,6 +43,20 @@ export class GeometryBoard extends Board {
     this.solidPxRect(arena, 0, 882, 1672, 941);
     // little right-side hop pad
     this.solidPxRect(arena, 1345, 473, 1441, 501, { oneWay: true });
+    // survey pass 2 (?edit=bb export 2026-07-12): the small floating shapes
+    // and low pillar tops are all standable brawler platforms too
+    this.solidPxRect(arena, 1325, 735, 1427, 813, { oneWay: true });
+    this.solidPxRect(arena, 214, 733, 298, 848, { oneWay: true });
+    this.solidPxRect(arena, 1132, 782, 1217, 858, { oneWay: true });
+    this.solidPxRect(arena, 449, 818, 571, 867, { oneWay: true });
+    this.solidPxRect(arena, 483, 351, 527, 400, { oneWay: true });
+    this.solidPxRect(arena, 1214, 271, 1310, 403, { oneWay: true });
+    this.solidPxRect(arena, 562, 256, 615, 304, { oneWay: true });
+    this.solidPxRect(arena, 993, 245, 1059, 294, { oneWay: true });
+    this.solidPxRect(arena, 1154, 568, 1209, 617, { oneWay: true });
+    this.solidPxRect(arena, 270, 402, 352, 467, { oneWay: true });
+    this.solidPxRect(arena, 1220, 160, 1288, 209, { oneWay: true });
+    this.solidPxRect(arena, 366, 164, 524, 228, { oneWay: true });
 
     // the giant painted gear-saws (hazards surveyed 2026-07-11)
     this.addKillZonePx(0, 60, 121, 589, { labels: ["GEARED", "SAWN", "TESSELLATED"], fx: "star", sfx: "pop" });
