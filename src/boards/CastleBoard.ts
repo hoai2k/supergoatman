@@ -65,7 +65,8 @@ export class CastleBoard extends Board {
       if (near && cd <= 0 && prev > 1.0 && vy <= 0.2) {
         // impact: the solver just reversed a real fall — take over the launch
         const pound = g.poundT > 0;
-        const rollJuice = Math.min(2.0, Math.abs(g.body.angvel()) * 0.26);
+        // rolling barely feeds the launch — height comes from falls and hits
+        const rollJuice = Math.min(0.5, Math.abs(g.body.angvel()) * 0.06);
         const out = Math.min(
           15,
           pound ? prev * 1.12 + 4.2 + rollJuice : prev * 0.98 + rollJuice,
@@ -81,10 +82,10 @@ export class CastleBoard extends Board {
           arena.sfx.play("pop", { rate: 0.9, volume: 0.35 });
         }
       } else if (near && cd <= 0 && Math.abs(vy) < 0.7 && Math.abs(g.body.angvel()) > 2.2) {
-        // rolling across the mattress: boing, boing, boing
+        // rolling across the mattress: little cosmetic boings, no real lift
         const lv = g.body.linvel();
         g.body.setLinvel(
-          { x: lv.x, y: -Math.min(3.6, 1.7 + Math.abs(g.body.angvel()) * 0.22) },
+          { x: lv.x, y: -Math.min(1.1, 0.6 + Math.abs(g.body.angvel()) * 0.06) },
           true,
         );
         this.hopCd.set(idx, 0.34);
