@@ -35,6 +35,8 @@ export interface Arena {
   sfx: Sfx;
   /** Arena world rect (backdrop bounds) — used by AI + hazard checks. */
   bounds: { minX: number; maxX: number; minY: number; maxY: number };
+  /** Board override for the goat hard speed cap (bouncy castle airtime). */
+  speedCap?: number;
   /**
    * The one true way to kill a goat: handles lives, ragdoll, FX, and respawn
    * scheduling. `impulse` is added to the ragdoll pieces; `byPlayer` credits

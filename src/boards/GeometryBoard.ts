@@ -97,7 +97,4 @@ export class GeometryBoard extends Board {
     }
   }
 
-  escalate(dt: number) {
-    this.creepZones(dt);
-  }
 }

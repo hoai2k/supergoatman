@@ -117,7 +117,6 @@ export const LIVES = 9; // cats wish they were goats
 export const MATCH = {
   roundIntroTime: 2.0,
   outroTime: 3.0,
-  suddenDeathAfter: 99, // seconds before a board starts closing in
 };
 
 export const MAX_PLAYERS = 4;

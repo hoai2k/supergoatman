@@ -13,8 +13,9 @@ interface Piece {
   sprite: Sprite;
 }
 
-const LIFETIME = 3.2;
-const FADE_AT = 2.2;
+// ragdolls flop for two seconds, then vanish in a puff of smoke; the
+// replacement goat arrives a beat later (no ghostly fade overlap)
+const LIFETIME = 2.0;
 
 /**
  * A goat that has stopped being a goat. Built by cutting the SAME neutral
@@ -114,16 +115,27 @@ export class Ragdoll {
   }
 
   /** Returns false once fully expired (caller then calls destroy). */
-  update(dt: number): boolean {
+  update(dt: number, arena: Arena): boolean {
     this.life += dt;
-    const alpha = this.life > FADE_AT ? Math.max(0, 1 - (this.life - FADE_AT) / (LIFETIME - FADE_AT)) : 1;
     for (const p of this.pieces) {
       const t = p.body.translation();
       p.sprite.position.set(t.x, t.y);
       p.sprite.rotation = p.body.rotation();
-      p.sprite.alpha = alpha;
     }
-    if (this.life >= LIFETIME) this.alive = false;
+    if (this.life >= LIFETIME && this.alive) {
+      // the big send-off: one puff of smoke and the body is simply gone
+      let cx = 0;
+      let cy = 0;
+      for (const p of this.pieces) {
+        const t = p.body.translation();
+        cx += t.x / this.pieces.length;
+        cy += t.y / this.pieces.length;
+      }
+      arena.fx.burst("dust", { x: cx, y: cy }, { n: 26 });
+      arena.fx.ring({ x: cx, y: cy }, 0xdddddd, 1.1);
+      arena.sfx.play("pop", { rate: 0.6, volume: 0.7 });
+      this.alive = false;
+    }
     return this.alive;
   }
 

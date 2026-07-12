@@ -174,29 +174,6 @@ export class BridgeBoard extends Board {
     this.killY = 7.2;
   }
 
-  escalate(dt: number, arena: Arena) {
-    this.breakT -= dt;
-    if (this.breakT <= 0) {
-      this.breakT = 2.4;
-      const alive = this.planks.filter((p) => !p.broken);
-      if (alive.length > 5) {
-        const mid = alive[Math.floor(alive.length / 2) + ((this.rng() * 3) | 0) - 1];
-        if (mid) {
-          mid.broken = true;
-          mid.prop.alive = false;
-          mid.sprite.visible = false;
-          const t = mid.body.translation();
-          for (const g of arena.goats) g.releaseIfGrabbing(mid.body, arena);
-          arena.physics.world.removeRigidBody(mid.body);
-          const pi = arena.props.indexOf(mid.prop);
-          if (pi >= 0) arena.props.splice(pi, 1);
-          arena.fx.burst("dust", { x: t.x, y: t.y }, { n: 12 });
-          arena.fx.shake(8);
-          arena.sfx.play("thud");
-        }
-      }
-    }
-  }
 
   checkHazards(arena: Arena) {
     super.checkHazards(arena);

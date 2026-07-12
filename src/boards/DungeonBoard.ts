@@ -134,9 +134,6 @@ export class DungeonBoard extends Board {
     }
   }
 
-  escalate(dt: number) {
-    this.creepZones(dt);
-  }
 
   destroy(arena: Arena) {
     this.links.length = 0;

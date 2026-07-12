@@ -74,9 +74,6 @@ export class TundraBoard extends Board {
     for (const p of this.penguins) p.sync();
   }
 
-  escalate(dt: number) {
-    this.creepZones(dt);
-  }
 
   destroy(arena: Arena) {
     this.moose.destroy(arena);

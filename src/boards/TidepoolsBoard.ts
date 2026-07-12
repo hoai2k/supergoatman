@@ -87,9 +87,6 @@ export class TidepoolsBoard extends Board {
     }
   }
 
-  escalate(dt: number) {
-    this.creepZones(dt);
-  }
 
   destroy(arena: Arena) {
     for (const c of this.critters) c.destroy(arena);

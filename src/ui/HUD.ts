@@ -1,7 +1,6 @@
 import { Container, Graphics, Sprite, Text } from "pixi.js";
 import { mkText, COL } from "./theme";
 import { goatPreview, PREVIEW_ANCHOR } from "../render/goatPreview";
-import { MATCH } from "../config";
 import type { Match } from "../core/Match";
 
 class LivesCard {
@@ -53,7 +52,6 @@ class LivesCard {
 export class HUD {
   root = new Container();
   private cards: LivesCard[] = [];
-  private sudden = mkText("", { size: 26, weight: "900", fill: COL.bad, stroke: COL.ink, strokeW: 6 });
   private vw = 1280;
 
   build(match: Match) {
@@ -64,8 +62,6 @@ export class HUD {
       this.cards.push(c);
       this.root.addChild(c.root);
     }
-    this.sudden.visible = false;
-    this.root.addChild(this.sudden);
     this.layout(this.vw);
   }
 
@@ -77,20 +73,12 @@ export class HUD {
     const total = n * cw + (n - 1) * gap;
     const startX = (vw - total) / 2;
     for (let i = 0; i < n; i++) this.cards[i].root.position.set(startX + i * (cw + gap), 14);
-    this.sudden.position.set(vw / 2, 96);
   }
 
   update(match: Match) {
     for (let i = 0; i < this.cards.length; i++) {
       const g = match.goats[i];
       this.cards[i].setLives(g.lives, g.eliminated);
-    }
-    if (match.phase === "play" && match.playTime > MATCH.suddenDeathAfter) {
-      this.sudden.visible = true;
-      this.sudden.text = "⚠ SUDDEN DEATH ⚠";
-      this.sudden.scale.set(1 + Math.sin(match.playTime * 8) * 0.06);
-    } else {
-      this.sudden.visible = false;
     }
   }
 

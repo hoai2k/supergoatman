@@ -26,6 +26,8 @@ export class Physics {
   oneWay = new Set<number>();
   private oneWayTop = new Map<number, number>(); // platform handle -> top plane y
   private bottoms = new Map<number, number>(); // dynamic collider -> lowest point y
+  /** Per (deck, body) solid/pass memory — the hysteresis half of the filter. */
+  private pairSolid = new Map<string, boolean>();
   /** Cached hull vertices per collider (shape.vertices round-trips wasm). */
   private vertCache = new Map<number, Float32Array>();
 
@@ -79,9 +81,16 @@ export class Physics {
       if (top === undefined) return RAPIER.SolverFlags.COMPUTE_IMPULSE;
       const bottom = this.bottoms.get(other);
       if (bottom === undefined) return RAPIER.SolverFlags.COMPUTE_IMPULSE;
-      // solid exactly when the body's lowest point sits at/above the deck's
-      // top plane (0.15 of penetration slack keeps landings sticky)
-      return bottom <= top + 0.15 ? RAPIER.SolverFlags.COMPUTE_IMPULSE : null;
+      // hysteresis: contact ARMS when the body's lowest point is at/above the
+      // top plane (0.15 slack), but once standing it stays solid until the
+      // body is 0.45 past the plane. Without the wide release, a goat
+      // rotating or dangling from a grab on the deck flickers past the arm
+      // threshold and falls straight through the floor.
+      const key = `${c1}|${c2}`;
+      const wasSolid = this.pairSolid.get(key) ?? false;
+      const solid = bottom <= top + (wasSolid ? 0.45 : 0.15);
+      this.pairSolid.set(key, solid);
+      return solid ? RAPIER.SolverFlags.COMPUTE_IMPULSE : null;
     },
     filterIntersectionPair: () => true,
   };

@@ -143,9 +143,6 @@ export class VoxelBoard extends Board {
     }
   }
 
-  escalate(dt: number) {
-    this.creepZones(dt);
-  }
 
   destroy(arena: Arena) {
     this.blocks.length = 0;

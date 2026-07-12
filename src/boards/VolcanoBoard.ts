@@ -66,9 +66,6 @@ export class VolcanoBoard extends Board {
     this.lavaY = this.baseLavaY;
   }
 
-  escalate(dt: number) {
-    this.lavaY = Math.max(0.2, this.lavaY - dt * 0.16);
-  }
 
   update(dt: number, arena: Arena) {
     this.t += dt;

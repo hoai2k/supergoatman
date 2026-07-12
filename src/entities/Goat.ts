@@ -73,6 +73,8 @@ export class Goat {
   // a short lockout stops the still-held grab from re-latching mid-launch
   private wallJumpT = 0;
   private grabLockT = 0;
+  /** Brief window after a kick/headbutt — bouncy floors read it as a POUND. */
+  poundT = 0;
 
   constructor(
     physics: Arena["physics"],
@@ -178,6 +180,7 @@ export class Goat {
     this.invulnT = Math.max(0, this.invulnT - dt);
     this.wallJumpT = Math.max(0, this.wallJumpT - dt);
     this.grabLockT = Math.max(0, this.grabLockT - dt);
+    this.poundT = Math.max(0, this.poundT - dt);
 
     if (this.alive) {
       this.applyRoll();
@@ -202,10 +205,12 @@ export class Goat {
     }
 
     // hard caps keep the brawl readable — nobody pinballs across the arena
+    // (bouncy boards raise the ceiling for big trampoline airs)
+    const cap = arena.speedCap ?? GOAT.maxSpeed;
     const lv = this.body.linvel();
     const sp = Math.hypot(lv.x, lv.y);
-    if (sp > GOAT.maxSpeed) {
-      const k = GOAT.maxSpeed / sp;
+    if (sp > cap) {
+      const k = cap / sp;
       this.body.setLinvel({ x: lv.x * k, y: lv.y * k }, false);
     }
     const av = this.body.angvel();
@@ -242,6 +247,7 @@ export class Goat {
   /** Y button: a short horn-first lunge — a pocket-sized kick. */
   private headbutt(arena: Arena) {
     this.buttCd = GOAT.buttCooldown;
+    this.poundT = 0.28;
     const head = this.headWorld();
     const dir = this.headDir();
     const grounded =
@@ -281,6 +287,7 @@ export class Goat {
     this.kicking = GOAT.kickActiveTime;
     this.kickCd = GOAT.kickActiveTime + GOAT.kickCooldown;
     this.kickHits.clear();
+    this.poundT = 0.28;
     // kicking while hanging on = wall jump: let go and launch at full power.
     // The lockout keeps the still-held grab from instantly re-latching, so
     // you can scale a wall by alternating grab and kick.
@@ -534,7 +541,7 @@ export class Goat {
     this.kicking = 0;
     this.kickAmt = 0;
     this.body.setEnabled(false);
-    this.respawnT = 2.0;
+    this.respawnT = 3.0; // 2s of ragdoll, poof, then a 1s beat before returning
     if (this.lives <= 0) this.eliminated = true;
   }
 

@@ -66,6 +66,7 @@ export class Match {
       fx: this.fx,
       sfx: this.audio,
       bounds: board.bounds,
+      speedCap: board.speedCap,
       killGoat: (g, cause, impulse, byPlayer) => this.killGoat(g, cause, impulse, byPlayer),
     };
 
@@ -195,7 +196,7 @@ export class Match {
     // ---- render sync ----
     for (const goat of this.goats) goat.sync();
     for (let i = this.ragdolls.length - 1; i >= 0; i--) {
-      if (!this.ragdolls[i].update(sdt)) {
+      if (!this.ragdolls[i].update(sdt, this.arena)) {
         this.ragdolls[i].destroy(this.arena);
         this.ragdolls.splice(i, 1);
       }
@@ -244,8 +245,6 @@ export class Match {
       this.playTime += dt;
       this.board.checkHazards(this.arena);
       this.respawnDueGoats(dt);
-      if (this.playTime > MATCH.suddenDeathAfter && this.goats.length > 0)
-        this.board.escalate?.(dt, this.arena);
 
       const left = this.contenders();
       if (left.length <= 1 && this.goats.length > 1) {

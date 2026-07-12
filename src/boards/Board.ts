@@ -77,6 +77,8 @@ export abstract class Board {
   spawns: Spawn[] = [];
   bounds: CamBounds = { ...ARENA_RECT };
   gravityScale = 1;
+  /** Optional override for the goat speed cap (see Arena.speedCap). */
+  speedCap?: number;
 
   protected solids: Solid[] = [];
   hazardZones: HazardZone[] = [];
@@ -97,8 +99,6 @@ export abstract class Board {
   }
   // reset props/hazards between rounds
   reset(_arena: Arena): void {}
-  // optional: escalate during sudden death (raise lava, shrink stage...)
-  escalate?(dt: number, arena: Arena): void;
   // optional: add extra points the camera should try to keep in frame
   decorateCameraPoints?(points: Vec2[]): void;
   // optional: decorate a goat when it enters this board (scuba tank, hat...)
@@ -252,15 +252,6 @@ export abstract class Board {
     const a = this.px(px0, py0);
     const b = this.px(px1, py1);
     this.addKillZone(a.x, a.y, b.x, b.y, opts);
-  }
-
-  /** Sudden death: hazard zones slowly creep toward the centre. */
-  protected creepZones(dt: number, rate = 0.09) {
-    for (const z of this.hazardZones) {
-      const cx = (z.minX + z.maxX) / 2;
-      if (cx < 0) z.maxX = Math.min(z.maxX + dt * rate, this.bounds.maxX - 2);
-      else z.minX = Math.max(z.minX - dt * rate, this.bounds.minX + 2);
-    }
   }
 
   /**

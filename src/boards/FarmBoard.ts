@@ -76,9 +76,6 @@ export class FarmBoard extends Board {
     for (const s of this.sheep) s.sync();
   }
 
-  escalate(dt: number) {
-    this.creepZones(dt);
-  }
 
   destroy(arena: Arena) {
     for (const w of this.walkers) w.destroy(arena);

@@ -207,9 +207,6 @@ export class BalloonBoard extends Board {
     }
   }
 
-  escalate(dt: number) {
-    this.killY = Math.max(2.5, this.killY - dt * 0.4);
-  }
 
   checkHazards(arena: Arena) {
     super.checkHazards(arena);

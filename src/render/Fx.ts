@@ -225,7 +225,10 @@ export class FxSystem implements Fx {
       pop.vy *= Math.max(0, 1 - 2 * dt);
       const tt = pop.life / pop.max;
       pop.t.alpha = Math.min(1, tt * 2.5);
-      const s = 0.011 * (1 + (1 - tt) * 0.4);
+      // counter the camera zoom so labels read the same size on screen
+      // whether the party-cam is wide or fully punched in
+      const zoomK = 0.85 / Math.max(0.25, this.cam.zoom);
+      const s = 0.011 * (1 + (1 - tt) * 0.4) * zoomK;
       pop.t.scale.set(s);
       pop.t.position.set(pop.x, pop.y);
     }
