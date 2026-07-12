@@ -15,27 +15,35 @@ interface KeyScheme {
   down: string[];
   kick: string[];
   grab: string[];
+  butt: string[];
+  precise: string[];
   start: string[];
 }
 
 const SCHEMES: KeyScheme[] = [
   {
-    left: ["KeyA"],
-    right: ["KeyD"],
-    up: ["KeyW"],
-    down: ["KeyS"],
-    kick: ["Space"],
-    grab: ["ShiftLeft", "KeyE", "KeyQ"],
-    start: ["Enter"],
-  },
-  {
+    // primary: arrows to move, ↑ grab, ↓ headbutt, Space kick, Shift precise
     left: ["ArrowLeft"],
     right: ["ArrowRight"],
     up: ["ArrowUp"],
     down: ["ArrowDown"],
-    kick: ["ShiftRight", "Slash", "Numpad0"],
-    grab: ["Period", "ControlRight", "NumpadDecimal"],
-    start: ["Backslash"],
+    kick: ["Space"],
+    grab: ["ArrowUp"],
+    butt: ["ArrowDown"],
+    precise: ["ShiftLeft", "ShiftRight"],
+    start: ["Enter"],
+  },
+  {
+    // second local keyboard player: WASD mirror of the arrow layout
+    left: ["KeyA"],
+    right: ["KeyD"],
+    up: ["KeyW"],
+    down: ["KeyS"],
+    kick: ["KeyF"],
+    grab: ["KeyW"],
+    butt: ["KeyS"],
+    precise: ["KeyQ", "KeyE"],
+    start: ["KeyR"],
   },
 ];
 
@@ -118,11 +126,11 @@ export class InputHub {
     return {
       roll,
       aimX: 0,
-      aimY: (on(s.down) ? 1 : 0) - (on(s.up) ? 1 : 0),
+      aimY: 0,
       kick: on(s.kick),
-      grab: on(s.grab),
-      butt: on(s.up), // W / ↑ — headbutt
-      precise: on(s.down), // S / ↓ — slow, fine rotation
+      grab: on(s.grab), // ↑ / W
+      butt: on(s.butt), // ↓ / S — headbutt
+      precise: on(s.precise), // Shift / Q,E — slow, fine rotation
     };
   }
 

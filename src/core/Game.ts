@@ -138,6 +138,6 @@ export function sourceKey(s: Source): string {
 export function sourceLabel(s: Source | null): string {
   if (!s) return "CPU";
   if (s.kind === "gamepad") return `Pad ${s.index + 1}`;
-  if (s.kind === "keyboard") return s.scheme === 0 ? "WASD" : "Arrows";
+  if (s.kind === "keyboard") return s.scheme === 0 ? "Arrows" : "WASD";
   return "CPU";
 }
