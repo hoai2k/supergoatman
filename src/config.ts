@@ -117,6 +117,7 @@ export const LIVES = 5;
 export const MATCH = {
   roundIntroTime: 2.0,
   outroTime: 3.0,
+  deathCamHold: 4.0, // seconds the camera keeps a death spot in frame
 };
 
 export const MAX_PLAYERS = 4;

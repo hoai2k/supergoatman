@@ -32,6 +32,8 @@ export class Match {
   goats: Goat[] = [];
   private ai = new Map<number, GoatAI>();
   private ragdolls: Ragdoll[] = [];
+  /** Death spots the camera keeps in frame for a beat before drifting off. */
+  private deathHolds: { pos: Vec2; t: number }[] = [];
 
   world = new Container(); // scaled/positioned by camera
   private terrainLayer = new Container();
@@ -116,6 +118,9 @@ export class Match {
     this.fx.popText({ x: goat.pos.x, y: goat.pos.y - 0.7 }, cause, goat.palette.body);
     this.audio.play("thud", { rate: 0.7 });
     this.hitstop = 0.14;
+
+    // linger on the scene of the crime, then let the camera damp away
+    this.deathHolds.push({ pos: { x: goat.pos.x, y: goat.pos.y }, t: MATCH.deathCamHold });
 
     goat.enterDeadState(this.arena);
     // pick the comeback spot NOW so the camera can hold it in frame — no
@@ -215,6 +220,12 @@ export class Match {
       for (const g of this.goats) {
         if (g.dead && !g.eliminated && g.pendingSpawn) pts.push(g.pendingSpawn.pos);
       }
+    }
+    for (let i = this.deathHolds.length - 1; i >= 0; i--) {
+      const h = this.deathHolds[i];
+      h.t -= dt;
+      if (h.t <= 0) this.deathHolds.splice(i, 1);
+      else pts.push(h.pos);
     }
     this.board.decorateCameraPoints?.(pts);
     if (pts.length) this.camera.frame(pts);

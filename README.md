@@ -10,7 +10,7 @@ friends into lava, off bridges, into sea-urchins, and out of the sky. Bring cont
 
 - **2–4 local players** on one screen, plus **CPU goats** to fill the roster (three skill levels: Chill / Normal / Feral).
 - **XBox / gamepad first** (up to 4 pads), with keyboard fallback for two players.
-- **VS mode**: every goat has **9 lives**. Lose one and you ragdoll apart, then respawn — until you're out. Last goat standing wins.
+- **VS mode**: every goat has **5 lives**. Lose one and you ragdoll apart, then respawn — until you're out. Last goat standing wins.
 - Ways to die: booted square in the **head**, shoved into the **deadly obstacles** at every arena's edges (spears, urchins, stakes, molten glass), the arena's own specialty (lava, the void, the canyon) — or held by the scruff and **twisted** until physics gives up on you.
 - Every goat is **recolourable** — pick your bright, silly colour in the lobby.
 
