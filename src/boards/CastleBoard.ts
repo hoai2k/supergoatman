@@ -26,9 +26,13 @@ export class CastleBoard extends Board {
     this.addBackdrop("castle");
     this.addArenaShell(arena);
 
-    // surveyed layout (?edit=bb export 2026-07-11): one wall-to-wall
+    // surveyed layout (?edit=bb export 2026-07-13): one wall-to-wall
     // mattress — the entire floor is a trampoline, nowhere to hide
     this.solidPxRect(arena, 0, 652, 1672, 850, { restitution: 0.82, bouncy: true, friction: 0.7 });
+
+    // corner perches above the spike beds
+    this.solidPxRect(arena, -79, 394, 144, 472, { oneWay: true, visible: true });
+    this.solidPxRect(arena, 1534, 394, 1757, 475, { oneWay: true, visible: true });
 
     // painted silver spike beds on the ledges
     this.addKillZonePx(0, 570, 195, 700, { labels: ["DEFLATED", "POPPED", "DEPOSIT LOST"], fx: "star", sfx: "pop" });
