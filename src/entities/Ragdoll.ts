@@ -30,13 +30,6 @@ const GRID_Y = 10;
 // instead of creasing along the part-rect borders
 const FALLOFF_PX = 14;
 
-// skinning mesh resolution (quads across the sprite's content bbox)
-const GRID_X = 12;
-const GRID_Y = 10;
-// weight falloff: softens the 1/d² blend so joints bend over a region
-// instead of creasing along the part-rect borders
-const FALLOFF_PX = 14;
-
 /**
  * A goat that has stopped being a goat. The physics is a jointed skeleton
  * (head/torso/legs as bodies with limited revolute joints), but the render
