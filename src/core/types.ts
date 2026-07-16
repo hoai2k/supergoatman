@@ -39,8 +39,9 @@ export interface Arena {
   speedCap?: number;
   /**
    * The one true way to kill a goat: handles lives, ragdoll, FX, and respawn
-   * scheduling. `impulse` is added to the ragdoll pieces; `byPlayer` credits
-   * the killer. No-op while the victim is dead or invulnerable.
+   * scheduling. `impulse` is added to the ragdoll; when `hitPos` is given the
+   * part nearest the hit takes the brunt and drags the rest along. `byPlayer`
+   * credits the killer. No-op while the victim is dead or invulnerable.
    */
-  killGoat(goat: Goat, cause: string, impulse?: Vec2, byPlayer?: number): void;
+  killGoat(goat: Goat, cause: string, impulse?: Vec2, byPlayer?: number, hitPos?: Vec2): void;
 }

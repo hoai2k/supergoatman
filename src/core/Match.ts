@@ -69,7 +69,7 @@ export class Match {
       sfx: this.audio,
       bounds: board.bounds,
       speedCap: board.speedCap,
-      killGoat: (g, cause, impulse, byPlayer) => this.killGoat(g, cause, impulse, byPlayer),
+      killGoat: (g, cause, impulse, byPlayer, hitPos) => this.killGoat(g, cause, impulse, byPlayer, hitPos),
     };
 
     this.board.bg = this.bg;
@@ -94,7 +94,7 @@ export class Match {
   }
 
   // ---- death & respawn ----------------------------------------------------
-  private killGoat(goat: Goat, cause: string, impulse?: Vec2, byPlayer?: number) {
+  private killGoat(goat: Goat, cause: string, impulse?: Vec2, byPlayer?: number, hitPos?: Vec2) {
     if (goat.dead || goat.eliminated || goat.invulnT > 0 || this.phase !== "play") return;
     goat.lives--;
 
@@ -109,6 +109,7 @@ export class Match {
         goat.body.angvel(),
         this.goatLayer,
         impulse,
+        hitPos,
       ),
     );
 
