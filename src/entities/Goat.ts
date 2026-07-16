@@ -541,7 +541,7 @@ export class Goat {
     this.kicking = 0;
     this.kickAmt = 0;
     this.body.setEnabled(false);
-    this.respawnT = 3.0; // 2s of ragdoll, poof, then a 1s beat before returning
+    this.respawnT = 4.0; // 3s of ragdoll, poof, then a 1s beat before returning
     if (this.lives <= 0) this.eliminated = true;
   }
 
