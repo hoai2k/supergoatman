@@ -330,7 +330,7 @@ export class Goat {
         // A hoof square to the skull is lethal (very Super Bunny Man).
         const headHit = closestOnSegment(other.headWorld(), feet, end);
         if (headHit.dist < HEAD_RADIUS + GOAT.kickWidth * 0.55 && other.invulnT <= 0) {
-          arena.killGoat(other, "BOOTED", { x: imp.x * 0.35, y: imp.y * 0.35 - 1.2 }, this.playerIndex);
+          arena.killGoat(other, "BOOTED", { x: imp.x * 0.6, y: imp.y * 0.6 - 1.6 }, this.playerIndex, other.headWorld());
           this.body.applyImpulse(scale(imp, -0.18), true);
           continue;
         }
@@ -386,7 +386,7 @@ export class Goat {
         this.twistAccum = Math.max(0, this.twistAccum + d - FIXED_DT * 1.2);
         if (this.twistAccum > 2.6 && victim.invulnT <= 0) {
           const fling = norm(sub(victim.pos, this.pos));
-          arena.killGoat(victim, "NECKED", { x: fling.x * 2, y: fling.y * 2 - 1 }, this.playerIndex);
+          arena.killGoat(victim, "NECKED", { x: fling.x * 2.4, y: fling.y * 2.4 - 1.2 }, this.playerIndex, victim.headWorld());
           this.releaseGrab(arena);
         }
       }

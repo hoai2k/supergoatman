@@ -58,26 +58,43 @@ export class Ragdoll {
     angvel: number,
     layer: Container,
     impulse?: Vec2,
+    hitPos?: Vec2,
   ) {
     const world = arena.physics.world;
     const byName = new Map<string, Bone>();
 
-    for (const part of RAGDOLL_PARTS) {
+    // when we know where the killing blow landed, the nearest part takes the
+    // brunt of the impulse and drags the rest of the body along through the
+    // joints; with no hit point the impulse spreads evenly (hazards, lava)
+    const partWorld = RAGDOLL_PARTS.map((part) => {
       const r = part.rect;
-      // part centre in goat-local units, then world
-      const centerLocal = cellPxToLocal(r.x + r.w / 2, r.y + r.h / 2);
-      const off = rotate(centerLocal, angle);
-      const px = origin.x + off.x;
-      const py = origin.y + off.y;
+      const off = rotate(cellPxToLocal(r.x + r.w / 2, r.y + r.h / 2), angle);
+      return { x: origin.x + off.x, y: origin.y + off.y };
+    });
+    let impulseScale = RAGDOLL_PARTS.map(() => 1);
+    if (hitPos && impulse) {
+      const w = partWorld.map((p) => 1 / (Math.hypot(p.x - hitPos.x, p.y - hitPos.y) + 0.15));
+      const wmax = Math.max(...w);
+      impulseScale = w.map((x) => 2.4 * (x / wmax) ** 2);
+    }
+
+    for (let pi = 0; pi < RAGDOLL_PARTS.length; pi++) {
+      const part = RAGDOLL_PARTS[pi];
+      const r = part.rect;
+      const px = partWorld[pi].x;
+      const py = partWorld[pi].y;
+      const off = { x: px - origin.x, y: py - origin.y };
 
       const desc = RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(px, py)
         .setRotation(angle)
-        .setLinearDamping(0.3)
-        .setAngularDamping(0.8)
+        .setLinearDamping(0.12)
+        .setAngularDamping(0.25)
         .setCcdEnabled(true);
       const body = world.createRigidBody(desc);
-      const col = RAPIER.ColliderDesc.ball(part.radius)
+      // slimmer colliders than the live goat's: the skeleton can fold flat
+      // into a heap instead of resting propped on fat spheres
+      const col = RAPIER.ColliderDesc.ball(part.radius * 0.55)
         .setDensity(0.7)
         .setFriction(0.9)
         .setRestitution(0.08)
@@ -87,10 +104,11 @@ export class Ragdoll {
       // velocity of this part = body linvel + spin contribution + a whisper of
       // scatter — the body should flop as one piece, not detonate
       const spin = { x: -off.y * angvel, y: off.x * angvel };
+      const kick = impulseScale[pi];
       body.setLinvel(
         new RAPIER.Vector2(
-          linvel.x + spin.x + (Math.random() - 0.5) * 0.5 + (impulse?.x ?? 0),
-          linvel.y + spin.y + (Math.random() - 0.5) * 0.5 + (impulse?.y ?? 0),
+          linvel.x + spin.x + (Math.random() - 0.5) * 0.5 + (impulse?.x ?? 0) * kick,
+          linvel.y + spin.y + (Math.random() - 0.5) * 0.5 + (impulse?.y ?? 0) * kick,
         ),
         true,
       );
