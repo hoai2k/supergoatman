@@ -89,7 +89,7 @@ export class Ragdoll {
         .setTranslation(px, py)
         .setRotation(angle)
         .setLinearDamping(0.12)
-        .setAngularDamping(0.25)
+        .setAngularDamping(0.5)
         .setCcdEnabled(true);
       const body = world.createRigidBody(desc);
       // slimmer colliders than the live goat's: the skeleton can fold flat
@@ -119,8 +119,14 @@ export class Ragdoll {
       byName.set(part.name, bone);
     }
 
-    // free revolute joints: the skinned mesh keeps the body reading as one
-    // goat, so limbs can swing loose and the whole thing collapses in a heap
+    // revolute joints with GENEROUS limits: limbs get a wide swing so the
+    // body flops and stretches convincingly, but the arcs stop it folding
+    // completely flat into a shapeless puddle — a floppy goat, still a goat
+    const LIMITS: Record<string, [number, number]> = {
+      head: [-1.3, 1.3], // neck lolls far but not all the way around
+      backLeg: [-1.8, 1.8], // legs swing wide and can splay
+      frontLeg: [-1.8, 1.8],
+    };
     for (const [aName, bName, jx, jy] of RAGDOLL_JOINTS) {
       const a = byName.get(aName);
       const b = byName.get(bName);
@@ -138,7 +144,9 @@ export class Ragdoll {
         new RAPIER.Vector2(a1.x, a1.y),
         new RAPIER.Vector2(a2.x, a2.y),
       );
-      world.createImpulseJoint(jd, a.body, b.body, true);
+      const joint = world.createImpulseJoint(jd, a.body, b.body, true) as RAPIER.RevoluteImpulseJoint;
+      const lim = LIMITS[bName] ?? [-1.5, 1.5];
+      joint.setLimits(lim[0], lim[1]);
     }
 
     // ---- skinned mesh over the whole neutral sprite -----------------------
