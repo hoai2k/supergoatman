@@ -19,9 +19,16 @@ interface Bone {
   rect: { x: number; y: number; w: number; h: number };
 }
 
-// ragdolls flop for two seconds, then vanish in a puff of smoke; the
-// replacement goat arrives a beat later (no ghostly fade overlap)
-const LIFETIME = 2.0;
+// ragdolls get three seconds to collapse in a heap, then vanish in a puff
+// of smoke; the replacement goat arrives a beat later (no ghostly overlap)
+const LIFETIME = 3.0;
+
+// skinning mesh resolution (quads across the sprite's content bbox)
+const GRID_X = 12;
+const GRID_Y = 10;
+// weight falloff: softens the 1/d² blend so joints bend over a region
+// instead of creasing along the part-rect borders
+const FALLOFF_PX = 14;
 
 // skinning mesh resolution (quads across the sprite's content bbox)
 const GRID_X = 12;
@@ -74,13 +81,13 @@ export class Ragdoll {
         .setTranslation(px, py)
         .setRotation(angle)
         .setLinearDamping(0.3)
-        .setAngularDamping(1.7)
+        .setAngularDamping(0.8)
         .setCcdEnabled(true);
       const body = world.createRigidBody(desc);
       const col = RAPIER.ColliderDesc.ball(part.radius)
         .setDensity(0.7)
-        .setFriction(0.8)
-        .setRestitution(0.25)
+        .setFriction(0.9)
+        .setRestitution(0.08)
         .setCollisionGroups(groups(CG.PROP, CG.TERRAIN | CG.GOAT | CG.PROP));
       world.createCollider(col, body);
 
@@ -101,13 +108,8 @@ export class Ragdoll {
       byName.set(part.name, bone);
     }
 
-    // revolute joints WITH LIMITS: limbs swing through plausible arcs around
-    // their sockets instead of spinning freely — a ragdoll, not a dismembering
-    const LIMITS: Record<string, [number, number]> = {
-      head: [-0.55, 0.55], // neck flops about half a radian either way
-      backLeg: [-0.9, 0.9], // hips get a wider arc
-      frontLeg: [-0.9, 0.9],
-    };
+    // free revolute joints: the skinned mesh keeps the body reading as one
+    // goat, so limbs can swing loose and the whole thing collapses in a heap
     for (const [aName, bName, jx, jy] of RAGDOLL_JOINTS) {
       const a = byName.get(aName);
       const b = byName.get(bName);
@@ -125,9 +127,7 @@ export class Ragdoll {
         new RAPIER.Vector2(a1.x, a1.y),
         new RAPIER.Vector2(a2.x, a2.y),
       );
-      const joint = world.createImpulseJoint(jd, a.body, b.body, true) as RAPIER.RevoluteImpulseJoint;
-      const lim = LIMITS[bName] ?? [-0.8, 0.8];
-      joint.setLimits(lim[0], lim[1]);
+      world.createImpulseJoint(jd, a.body, b.body, true);
     }
 
     // ---- skinned mesh over the whole neutral sprite -----------------------
